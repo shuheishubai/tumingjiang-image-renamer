@@ -1,96 +1,351 @@
-const $=selector=>document.querySelector(selector);
-const photoPicker=$('#photoPicker'),photoDrop=$('#photoDrop'),photoGrid=$('#photoGrid'),photoToolbar=$('#photoToolbar'),submitBar=$('#submitBar'),personNo=$('#personNo'),personName=$('#personName'),identityError=$('#identityError'),toast=$('#toast');
-const zipPicker=$('#zipPicker'),zipDrop=$('#zipDrop'),submissionTable=$('#submissionTable'),submissionBody=$('#submissionTable tbody'),submissionEmpty=$('#submissionEmpty'),excludedInput=$('#excludedNumbers'),configHint=$('#configHint');
-let photos=[];let submissions=[];let contactSheetBlob=null;let toastTimer;
-const MAX_NUMBER=41;
-const TARGET_PEOPLE=39;
-const MAX_PHOTOS_PER_PERSON=2;
-const CODE_PREFIX='2025213300';
-const mimeExt={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/bmp':'bmp','image/avif':'avif','image/heic':'heic','image/heif':'heif','image/tiff':'tif','image/svg+xml':'svg'};
-const extMime={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp',avif:'image/avif',heic:'image/heic',heif:'image/heif',tif:'image/tiff',tiff:'image/tiff',svg:'image/svg+xml'};
+const $ = (selector) => document.querySelector(selector);
+const grid = $('#peopleGrid');
+const rosterInput = $('#rosterInput');
+const rosterError = $('#rosterError');
+const toast = $('#toast');
 
-function flash(text){toast.textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function cleanName(value){return String(value||'').replace(/[<>:"/\\|?*\u0000-\u001f]/g,'-').replace(/[. ]+$/g,'').trim().slice(0,120)}
-function padNo(value){const n=Number(value);return Number.isInteger(n)&&n>=1&&n<=MAX_NUMBER?String(n).padStart(2,'0'):''}
-function fileParts(file){const dot=file.name.lastIndexOf('.');const raw=dot>0?file.name.slice(0,dot):file.name;const ext=(dot>0?file.name.slice(dot+1):mimeExt[file.type]||'img').toLowerCase().replace(/[^a-z0-9]/g,'')||'img';return{raw,ext}}
-function identity(){return{number:padNo(personNo.value),name:cleanName(personName.value)}}
-function personCode(number){const normalized=padNo(number);return normalized?`${CODE_PREFIX}${normalized}`:''}
-function personBase(number,name){return[personCode(number),cleanName(name)].filter(Boolean).join('_')||'照片'}
-function photoBase(number,name,index){return`${personBase(number,name)}_${String(index+1).padStart(2,'0')}`}
-function autoBase(index){const info=identity();return photoBase(info.number,info.name,index)}
+const CODE_PREFIX = '2025213300';
+const MAX_NUMBER = 41;
+const MAX_PHOTOS = 2;
+const imageExtensions = /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif|tiff?)$/i;
+let people = [];
+let toastTimer;
 
-document.querySelectorAll('.mode').forEach(button=>button.addEventListener('click',()=>{
-  document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('active',x===button));
-  const mode=button.dataset.mode;
-  $('#participantView').classList.toggle('active',mode==='participant');
-  $('#organizerView').classList.toggle('active',mode==='organizer');
-  window.scrollTo({top:document.querySelector('.mode-switch').offsetTop-12,behavior:'smooth'});
-}));
-
-function validateIdentity(show=true){const info=identity();let message='';if(!info.number)message='请输入 01—41 之间的个人序号';else if(!info.name)message='请输入姓名';if(show)identityError.textContent=message;return!message}
-function refreshAutoNames(){photos.forEach((item,index)=>{if(item.auto)item.name=autoBase(index)});renderPhotos()}
-personNo.addEventListener('input',()=>{validateIdentity(false);refreshAutoNames()});
-personName.addEventListener('input',()=>{personName.value=personName.value.slice(0,30);validateIdentity(false);refreshAutoNames()});
-
-function bindDrop(zone,input,handler){
-  input.addEventListener('change',e=>{handler(e.target.files);input.value=''});
-  ['dragenter','dragover'].forEach(type=>zone.addEventListener(type,e=>{e.preventDefault();zone.classList.add('drag')}));
-  ['dragleave','drop'].forEach(type=>zone.addEventListener(type,e=>{e.preventDefault();zone.classList.remove('drag')}));
-  zone.addEventListener('drop',e=>handler(e.dataTransfer.files));
+function uid() {
+  return crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 }
 
-function addPhotos(files){const all=[...files],valid=all.filter(f=>f.type.startsWith('image/')),remaining=Math.max(0,MAX_PHOTOS_PER_PERSON-photos.length),images=valid.slice(0,remaining),notices=[];if(all.length!==valid.length)notices.push(`已忽略 ${all.length-valid.length} 个非图片文件`);if(valid.length>remaining)notices.push(`每人最多提交 ${MAX_PHOTOS_PER_PERSON} 张，已忽略多余照片`);for(const file of images){const p=fileParts(file);photos.push({id:crypto.randomUUID?.()||Date.now()+'-'+Math.random(),file,url:URL.createObjectURL(file),name:'',ext:p.ext,error:'',auto:true})}photos.forEach((item,index)=>{if(item.auto)item.name=autoBase(index)});renderPhotos();if(notices.length)flash(notices.join('；'));else if(images.length)flash(`已添加 ${images.length} 张照片`)}
-bindDrop(photoDrop,photoPicker,addPhotos);
-
-function validatePhotos(){const seen=new Map();photos.forEach(item=>{item.name=cleanName(item.name);item.error=item.name?'':'请输入照片名称';if(item.name){const key=(item.name+'.'+item.ext).toLocaleLowerCase();if(seen.has(key)){item.error='名称重复';seen.get(key).error='名称重复'}else seen.set(key,item)}});return photos.filter(x=>x.error).length}
-function photoStatusText(bad){if(bad)return`${bad} 张名称需要修改`;return photos.length===1?'已可提交，还可以再选 1 张':photos.length===2?'两张照片已齐':'请选择 1 张或 2 张'}
-function renderPhotos(){const has=photos.length>0;photoToolbar.classList.toggle('show',has);submitBar.classList.toggle('show',has);$('#photoCount').textContent=`已选择 ${photos.length}/${MAX_PHOTOS_PER_PERSON} 张`;const bad=validatePhotos();$('#photoStatus').textContent=photoStatusText(bad);photoGrid.innerHTML=photos.map((item,index)=>`<article class="photo-card" data-id="${item.id}"><button class="remove" data-remove aria-label="移除第 ${index+1} 张照片">×</button><div class="thumb"><img src="${item.url}" alt="第 ${index+1} 张照片预览"></div><div class="photo-meta"><div class="original" title="${esc(item.file.name)}">原文件：${esc(item.file.name)}</div><div class="namebox ${item.error?'invalid':''}"><input data-name value="${esc(item.name)}" aria-label="第 ${index+1} 张照片的统一名称" readonly><span class="ext">.${esc(item.ext)}</span></div><div class="error">${esc(item.error||'')}</div></div></article>`).join('');
-  photoGrid.querySelectorAll('[data-name]').forEach(input=>{input.addEventListener('input',e=>{const item=photos.find(x=>x.id===e.target.closest('.photo-card').dataset.id);item.name=e.target.value;item.auto=false;validatePhotos();syncPhotoErrors()});input.addEventListener('blur',e=>{e.target.value=cleanName(e.target.value);const item=photos.find(x=>x.id===e.target.closest('.photo-card').dataset.id);item.name=e.target.value;validatePhotos();syncPhotoErrors()})});
-  photoGrid.querySelectorAll('[data-remove]').forEach(button=>button.addEventListener('click',()=>removePhoto(button.closest('.photo-card').dataset.id)));
+function esc(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
 }
-function syncPhotoErrors(){photoGrid.querySelectorAll('.photo-card').forEach(card=>{const item=photos.find(x=>x.id===card.dataset.id);card.querySelector('.namebox').classList.toggle('invalid',!!item.error);card.querySelector('.error').textContent=item.error});const bad=photos.filter(x=>x.error).length;$('#photoStatus').textContent=photoStatusText(bad)}
-function removePhoto(id){const item=photos.find(x=>x.id===id);if(item)URL.revokeObjectURL(item.url);photos=photos.filter(x=>x.id!==id);photos.forEach((x,i)=>{if(x.auto)x.name=autoBase(i)});renderPhotos()}
-$('#clearPhotos').addEventListener('click',()=>{photos.forEach(x=>URL.revokeObjectURL(x.url));photos=[];renderPhotos();flash('照片已清空')});
 
-const crcTable=(()=>{const table=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;table[n]=c>>>0}return table})();
-function crc32(data){let c=0xffffffff;for(const b of data)c=crcTable[(c^b)&255]^(c>>>8);return(c^0xffffffff)>>>0}
-function u16(v){return new Uint8Array([v&255,(v>>>8)&255])}function u32(v){return new Uint8Array([v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255])}
-function join(chunks){const size=chunks.reduce((n,x)=>n+x.length,0),out=new Uint8Array(size);let p=0;for(const x of chunks){out.set(x,p);p+=x.length}return out}
-async function bytesOf(value){if(typeof value==='string')return new TextEncoder().encode(value);if(value instanceof Uint8Array)return value;if(value instanceof ArrayBuffer)return new Uint8Array(value);if(value instanceof Blob)return new Uint8Array(await value.arrayBuffer());throw new Error('不支持的文件内容')}
-async function makeZip(entries){const enc=new TextEncoder(),locals=[],centers=[];let offset=0;for(const entry of entries){const name=enc.encode(entry.name),data=await bytesOf(entry.data),crc=crc32(data);const local=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data]);locals.push(local);centers.push(join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]));offset+=local.length}const centralSize=centers.reduce((n,x)=>n+x.length,0);return new Blob([...locals,...centers,join([u32(0x06054b50),u16(0),u16(0),u16(entries.length),u16(entries.length),u32(centralSize),u32(offset),u16(0)])],{type:'application/zip'})}
-function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();const url=a.href;setTimeout(()=>URL.revokeObjectURL(url),30000)}
-
-$('#downloadPersonal').addEventListener('click',async()=>{
-  if(!validateIdentity(true)){personNo.focus();return}const bad=validatePhotos();syncPhotoErrors();if(photos.length<1||photos.length>MAX_PHOTOS_PER_PERSON){flash('每个人可以提交 1 张或 2 张照片');return}if(bad){flash('请先修改标红的照片名称');return}
-  const button=$('#downloadPersonal');button.disabled=true;button.textContent='正在生成…';try{const info=identity(),base=personBase(info.number,info.name);const files=photos.map((x,index)=>({name:`${photoBase(info.number,info.name,index)}.${x.ext}`,original:x.file.name}));const manifest={type:'tumingjiang-submission',version:3,prefix:CODE_PREFIX,code:personCode(info.number),number:info.number,name:info.name,photoCount:photos.length,createdAt:new Date().toISOString(),files};const entries=[{name:'提交信息.json',data:JSON.stringify(manifest,null,2)},...photos.map((x,index)=>({name:`${photoBase(info.number,info.name,index)}.${x.ext}`,data:x.file}))];const blob=await makeZip(entries);saveBlob(blob,`${base}_照片包.zip`);flash(`${photos.length} 张照片已统一命名，请发送照片包给负责人`)}catch(error){console.error(error);flash('生成失败，请稍后重试')}finally{button.disabled=false;button.textContent='生成个人照片包'}});
-
-function parseStoredZip(bytes){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),dec=new TextDecoder('utf-8');const entries=[];let p=0;while(p+30<=bytes.length){const sig=view.getUint32(p,true);if(sig===0x02014b50||sig===0x06054b50)break;if(sig!==0x04034b50)throw new Error('ZIP 文件结构不受支持');const flags=view.getUint16(p+6,true),method=view.getUint16(p+8,true),size=view.getUint32(p+18,true),nameLen=view.getUint16(p+26,true),extraLen=view.getUint16(p+28,true);if(flags&0x08)throw new Error('请使用本网站生成的原始 ZIP');if(method!==0)throw new Error('照片包已被二次压缩，请使用本网站生成的 ZIP');const start=p+30+nameLen+extraLen,end=start+size;if(end>bytes.length)throw new Error('ZIP 文件不完整');const name=dec.decode(bytes.slice(p+30,p+30+nameLen));entries.push({name,data:bytes.slice(start,end)});p=end}return entries}
-async function readSubmission(file){const bytes=new Uint8Array(await file.arrayBuffer()),entries=parseStoredZip(bytes);const manifestEntry=entries.find(x=>x.name==='提交信息.json');if(!manifestEntry)throw new Error('找不到提交信息');const manifest=JSON.parse(new TextDecoder().decode(manifestEntry.data));if(manifest.type!=='tumingjiang-submission'||!padNo(manifest.number)||!cleanName(manifest.name))throw new Error('不是有效的个人照片包');const images=entries.filter(x=>x.name!=='提交信息.json'&&/\.(jpe?g|png|webp|gif|bmp|avif|heic|heif|tiff?|svg)$/i.test(x.name));if(!images.length)throw new Error('照片包内没有图片');return{id:crypto.randomUUID?.()||Date.now()+'-'+Math.random(),fileName:file.name,number:padNo(manifest.number),name:cleanName(manifest.name),images,createdAt:manifest.createdAt||''}}
-async function addPackages(files){const zips=[...files].filter(file=>file.name.toLowerCase().endsWith('.zip'));if(!zips.length){flash('请选择个人 ZIP 照片包');return}let added=0;const errors=[];for(const file of zips){try{submissions.push(await readSubmission(file));added++}catch(error){errors.push(`${file.name}：${error.message}`)}}contactSheetBlob=null;renderOrganizer();if(added)flash(`已导入 ${added} 份个人照片包`);if(errors.length)setTimeout(()=>flash(errors.slice(0,2).join('；')),300)}
-bindDrop(zipDrop,zipPicker,addPackages);
-
-function excludedNumbers(value=excludedInput.value){const numbers=String(value||'').match(/\d+/g)||[];return new Set(numbers.map(padNo).filter(Boolean))}
-function duplicateNumbers(){const counts={};submissions.forEach(x=>counts[x.number]=(counts[x.number]||0)+1);return new Set(Object.keys(counts).filter(key=>counts[key]>1))}
-function collectionState(){const excluded=excludedNumbers(),expected=Array.from({length:MAX_NUMBER},(_,i)=>String(i+1).padStart(2,'0')).filter(n=>!excluded.has(n)),expectedSet=new Set(expected),unique=new Set(submissions.map(x=>x.number)),received=new Set([...unique].filter(n=>expectedSet.has(n))),excludedReceived=new Set([...unique].filter(n=>excluded.has(n))),missing=expected.filter(n=>!received.has(n));return{excluded,expected,unique,received,excludedReceived,missing,duplicates:duplicateNumbers()}}
-function canExport(){const state=collectionState();return submissions.length>0&&state.excluded.size===MAX_NUMBER-TARGET_PEOPLE&&!state.duplicates.size&&!state.excludedReceived.size}
-try{excludedInput.value=localStorage.getItem('tumingjiang-excluded-numbers')||''}catch{}
-excludedInput.addEventListener('input',()=>{try{localStorage.setItem('tumingjiang-excluded-numbers',excludedInput.value)}catch{}renderOrganizer()});
-excludedInput.addEventListener('blur',()=>{excludedInput.value=[...excludedNumbers()].sort().join('、');try{localStorage.setItem('tumingjiang-excluded-numbers',excludedInput.value)}catch{}renderOrganizer()});
-function renderOrganizer(){const state=collectionState(),{excluded,received,excludedReceived,missing,duplicates}=state,total=submissions.reduce((n,x)=>n+x.images.length,0),required=state.expected.length;$('#receivedCount').textContent=received.size;$('#totalPhotoCount').textContent=total;$('#missingCount').textContent=missing.length;configHint.textContent=excluded.size===2?`当前应收 ${required} 人；无需提交：${[...excluded].sort().join('、')}`:`当前设置了 ${excluded.size} 个无需提交编号，请设置两个；当前应收 ${required} 人。`;$('#numberGrid').innerHTML=Array.from({length:MAX_NUMBER},(_,i)=>{const n=String(i+1).padStart(2,'0'),badExcluded=excludedReceived.has(n),cls=badExcluded||duplicates.has(n)?'duplicate':excluded.has(n)?'skipped':received.has(n)?'done':'',title=badExcluded?'该编号设为无需提交，但已收到照片包':cls==='duplicate'?'序号重复':cls==='skipped'?'无需提交':cls==='done'?'已收到':'未收到';return`<div class="number-cell ${cls}" title="${title}">${n}</div>`}).join('');
-  $('#rosterHint').textContent=duplicates.size?`有 ${duplicates.size} 个重复序号，请先处理`:excludedReceived.size?`无需提交的编号 ${[...excludedReceived].join('、')} 已有照片包，请移除或修改设置`:excluded.size!==2?'请先设置两个无需提交的编号':missing.length?`还缺：${missing.join('、')}`:'39 人已全部收齐';
-  submissionEmpty.style.display=submissions.length?'none':'block';submissionTable.classList.toggle('show',submissions.length>0);submissionBody.innerHTML=submissions.slice().sort((a,b)=>a.number.localeCompare(b.number)).map(item=>{const bad=duplicates.has(item.number)||excluded.has(item.number);return`<tr class="${bad?'row-bad':''}" data-id="${item.id}"><td><b>${personCode(item.number)}</b>${bad?' ⚠':''}</td><td>${esc(item.name)}</td><td>${item.images.length} 张</td><td title="${esc(item.fileName)}">${esc(item.fileName.length>30?item.fileName.slice(0,27)+'…':item.fileName)}</td><td><button class="mini-remove" data-remove-package>移除</button></td></tr>`}).join('');submissionBody.querySelectorAll('[data-remove-package]').forEach(button=>button.addEventListener('click',()=>{submissions=submissions.filter(x=>x.id!==button.closest('tr').dataset.id);contactSheetBlob=null;renderOrganizer()}));
-  const ready=canExport();$('#downloadMaster').disabled=!ready;$('#makeContactSheet').disabled=!ready;$('#finalHint').textContent=excluded.size!==2?'请先设置两个无需提交的编号，确认实际应收39人。':duplicates.size?'存在重复序号，移除错误照片包后才能导出。':excludedReceived.size?'有照片包使用了“无需提交”的编号，请先处理。':received.size===TARGET_PEOPLE?'39 人已经收齐，可以导出最终版。':submissions.length?`当前已收 ${received.size}/39 人，可先导出阶段版本。`:'设置完成后可随时导出当前内容；收齐39人时会显示“已完成”。';
+function cleanName(value) {
+  return String(value || '')
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')
+    .replace(/[. ]+$/g, '')
+    .trim()
+    .slice(0, 60);
 }
-$('#clearPackages').addEventListener('click',()=>{submissions=[];contactSheetBlob=null;renderOrganizer();flash('汇总内容已清空')});
 
-function csvCell(value){return`"${String(value).replace(/"/g,'""')}"`}
-async function buildMasterZip(){const rows=['完整编号,序号,姓名,照片数量,个人照片包'];const entries=[];for(const item of submissions.slice().sort((a,b)=>a.number.localeCompare(b.number))){const folder=personBase(item.number,item.name);rows.push([personCode(item.number),item.number,item.name,item.images.length,item.fileName].map(csvCell).join(','));item.images.forEach((image,index)=>{const original=image.name.split('/').pop(),dot=original.lastIndexOf('.'),ext=(dot>=0?original.slice(dot+1):'img').toLowerCase().replace(/[^a-z0-9]/g,'')||'img';entries.push({name:`${folder}/${photoBase(item.number,item.name,index)}.${ext}`,data:image.data})})}entries.unshift({name:'39人照片汇总清单.csv',data:'\ufeff'+rows.join('\r\n')});if(contactSheetBlob)entries.push({name:'照片汇总长图.jpg',data:contactSheetBlob});return makeZip(entries)}
-$('#downloadMaster').addEventListener('click',async()=>{if(!canExport()){flash('请先设置两个无需提交编号，并处理标红项目');return}const button=$('#downloadMaster');button.disabled=true;button.textContent='正在汇总…';try{const blob=await buildMasterZip();saveBlob(blob,`39人照片最终汇总-${new Date().toISOString().slice(0,10)}.zip`);flash('最终总 ZIP 已生成')}catch(error){console.error(error);flash('汇总失败，请减少文件数量后重试')}finally{button.textContent='下载最终总 ZIP';button.disabled=!canExport()}});
+function padNumber(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 && number <= MAX_NUMBER
+    ? String(number).padStart(2, '0')
+    : '';
+}
 
-function drawCover(ctx,image,x,y,w,h){const scale=Math.max(w/image.width,h/image.height),sw=w/scale,sh=h/scale,sx=(image.width-sw)/2,sy=(image.height-sh)/2;ctx.drawImage(image,sx,sy,sw,sh,x,y,w,h)}
-async function createContactSheet(){const all=[];for(const item of submissions.slice().sort((a,b)=>a.number.localeCompare(b.number)))item.images.forEach((image,imageIndex)=>all.push({item,image,imageIndex}));if(!all.length)throw new Error('没有可合成的照片');const cols=all.length<4?all.length:4,tileW=280,tileH=238,header=86,rows=Math.ceil(all.length/cols),canvas=document.createElement('canvas');canvas.width=cols*tileW;canvas.height=header+rows*tileH;const ctx=canvas.getContext('2d');ctx.fillStyle='#f7f4ec';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#17211b';ctx.font='bold 30px Microsoft YaHei, sans-serif';ctx.fillText(`39人照片汇总 · 已收 ${collectionState().received.size} 人`,24,43);ctx.fillStyle='#667068';ctx.font='15px Microsoft YaHei, sans-serif';ctx.fillText(new Date().toLocaleDateString('zh-CN'),24,68);for(let i=0;i<all.length;i++){const {item,image,imageIndex}=all[i],col=i%cols,row=Math.floor(i/cols),x=col*tileW+14,y=header+row*tileH+10;ctx.fillStyle='#fffefa';ctx.fillRect(x-6,y-6,252,218);try{const blob=new Blob([image.data],{type:extMime[image.name.split('.').pop().toLowerCase()]||'image/jpeg'}),bitmap=await createImageBitmap(blob);drawCover(ctx,bitmap,x,y,240,168);bitmap.close()}catch{ctx.fillStyle='#e2e2da';ctx.fillRect(x,y,240,168);ctx.fillStyle='#667068';ctx.font='14px Microsoft YaHei, sans-serif';ctx.fillText('此格式无法生成预览',x+45,y+88)}ctx.fillStyle='#17211b';ctx.font='bold 13px Microsoft YaHei, sans-serif';ctx.fillText(`${personCode(item.number)}  ${item.name}`,x,y+190);ctx.fillStyle='#667068';ctx.font='11px Microsoft YaHei, sans-serif';const label=`${photoBase(item.number,item.name,imageIndex)}.${image.name.split('.').pop()}`;ctx.fillText(label.length>36?label.slice(0,33)+'…':label,x,y+208)}return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('长图生成失败')),'image/jpeg',.9))}
-$('#makeContactSheet').addEventListener('click',async()=>{if(!canExport()){flash('请先设置两个无需提交编号，并处理标红项目');return}const button=$('#makeContactSheet');button.disabled=true;button.textContent='正在合成…';try{contactSheetBlob=await createContactSheet();saveBlob(contactSheetBlob,`39人照片汇总长图-${new Date().toISOString().slice(0,10)}.jpg`);flash('汇总长图已生成；再次下载总 ZIP 时也会包含长图')}catch(error){console.error(error);flash(error.message||'长图生成失败')}finally{button.textContent='合成照片汇总长图';button.disabled=!canExport()}});
+function personCode(person) {
+  const number = padNumber(person.number);
+  return number ? `${CODE_PREFIX}${number}` : '';
+}
 
-renderPhotos();renderOrganizer();
-window.addEventListener('beforeunload',()=>photos.forEach(x=>URL.revokeObjectURL(x.url)));
+function photoBase(person, photoIndex) {
+  const code = personCode(person) || `${CODE_PREFIX}__`;
+  const name = cleanName(person.name) || '待填写姓名';
+  return `${code}_${name}_${String(photoIndex + 1).padStart(2, '0')}`;
+}
+
+function fileExtension(file) {
+  const dot = file.name.lastIndexOf('.');
+  return (dot >= 0 ? file.name.slice(dot + 1) : 'img')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '') || 'img';
+}
+
+function isImage(file) {
+  return file.type.startsWith('image/') || imageExtensions.test(file.name);
+}
+
+function flash(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function duplicateNumbers() {
+  const counts = new Map();
+  people.forEach((person) => {
+    const number = padNumber(person.number);
+    if (number) counts.set(number, (counts.get(number) || 0) + 1);
+  });
+  return new Set([...counts].filter(([, count]) => count > 1).map(([number]) => number));
+}
+
+function personIssue(person, duplicates) {
+  const number = padNumber(person.number);
+  if (!number) return '请填写01—41之间的序号';
+  if (duplicates.has(number)) return `序号${number}重复`;
+  if (!cleanName(person.name)) return '请填写姓名';
+  if (!person.photos.length) return '请添加一张或两张照片';
+  return '';
+}
+
+function allIssues() {
+  const duplicates = duplicateNumbers();
+  return people.map((person, index) => {
+    const issue = personIssue(person, duplicates);
+    return issue ? `第${index + 1}人：${issue}` : '';
+  }).filter(Boolean);
+}
+
+function releasePerson(person) {
+  person.photos.forEach((photo) => URL.revokeObjectURL(photo.url));
+}
+
+function render() {
+  const duplicates = duplicateNumbers();
+  const photoTotal = people.reduce((total, person) => total + person.photos.length, 0);
+  const ready = people.filter((person) => !personIssue(person, duplicates)).length;
+
+  $('#emptyState').style.display = people.length ? 'none' : 'flex';
+  grid.innerHTML = people.map((person, personIndex) => {
+    const issue = personIssue(person, duplicates);
+    const previews = person.photos.map((photo, photoIndex) => {
+      const newName = `${photoBase(person, photoIndex)}.${photo.ext}`;
+      return `<div class="photo-item">
+        <img src="${photo.url}" alt="${esc(person.name || `第${personIndex + 1}人`)}的第${photoIndex + 1}张照片">
+        <div class="photo-name"><b title="${esc(newName)}">${esc(newName)}</b><span title="${esc(photo.file.name)}">原图：${esc(photo.file.name)}</span></div>
+        <button class="remove-photo" data-remove-photo="${photoIndex}" aria-label="移除这张照片">×</button>
+      </div>`;
+    }).join('');
+
+    return `<article class="person-card ${issue ? 'invalid' : ''}" data-id="${person.id}">
+      <div class="person-row">
+        <div class="person-index">${String(personIndex + 1).padStart(2, '0')}</div>
+        <label class="field"><span>人员序号</span><input data-field="number" type="number" min="1" max="41" value="${esc(person.number)}" placeholder="01"></label>
+        <label class="field"><span>姓名</span><input data-field="name" maxlength="30" value="${esc(person.name)}" placeholder="请输入姓名"></label>
+        <button class="remove-person" data-remove-person>删除此人</button>
+      </div>
+      <div class="photo-area">
+        <label class="photo-picker"><input data-photos type="file" accept="image/*" multiple><span>${person.photos.length ? `继续添加（${person.photos.length}/2）` : '选择1张或2张照片'}</span></label>
+        <div class="photo-list">${previews || '<div class="person-status">尚未选择照片</div>'}</div>
+      </div>
+      <div class="person-status ${issue ? 'bad' : ''}">${issue || `已完成 · ${person.photos.length}张照片`}</div>
+    </article>`;
+  }).join('');
+
+  $('#personCount').textContent = people.length;
+  $('#photoCount').textContent = photoTotal;
+  $('#readyCount').textContent = ready;
+  $('#downloadFinal').disabled = people.length === 0;
+  const issues = allIssues();
+  $('#exportHint').textContent = !people.length
+    ? '添加名单和照片后，可以直接下载总压缩包。'
+    : issues.length
+      ? `还有 ${issues.length} 人需要补充信息或照片。`
+      : `${people.length} 人已经整理完成，可以导出最终版。`;
+}
+
+function parseRoster(text) {
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const parsed = [];
+  const errors = [];
+  lines.forEach((line, index) => {
+    const match = line.match(/^(\d{1,2})(?:\s+|[,，、:：-]\s*)(.+)$/);
+    if (!match || !padNumber(match[1]) || !cleanName(match[2])) {
+      errors.push(`第${index + 1}行格式不正确：${line}`);
+      return;
+    }
+    parsed.push({ id: uid(), number: padNumber(match[1]), name: cleanName(match[2]), photos: [] });
+  });
+  return { parsed, errors };
+}
+
+$('#createRoster').addEventListener('click', () => {
+  const { parsed, errors } = parseRoster(rosterInput.value);
+  if (!parsed.length) {
+    rosterError.textContent = errors[0] || '请先粘贴名单';
+    return;
+  }
+  if (errors.length) {
+    rosterError.textContent = errors.slice(0, 2).join('；');
+    return;
+  }
+  if (people.some((person) => person.photos.length) && !confirm('重新生成名单会清空已选择的照片，是否继续？')) return;
+  people.forEach(releasePerson);
+  people = parsed;
+  rosterError.textContent = '';
+  render();
+  flash(`已生成 ${people.length} 人的照片清单`);
+});
+
+$('#addPerson').addEventListener('click', () => {
+  people.push({ id: uid(), number: '', name: '', photos: [] });
+  render();
+  grid.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+$('#clearAll').addEventListener('click', () => {
+  if (!people.length) return;
+  if (!confirm('确定清空全部名单和已选择的照片吗？')) return;
+  people.forEach(releasePerson);
+  people = [];
+  rosterInput.value = '';
+  rosterError.textContent = '';
+  render();
+  flash('已清空全部内容');
+});
+
+grid.addEventListener('change', (event) => {
+  const card = event.target.closest('.person-card');
+  if (!card) return;
+  const person = people.find((item) => item.id === card.dataset.id);
+  if (!person) return;
+
+  if (event.target.matches('[data-field]')) {
+    person[event.target.dataset.field] = event.target.dataset.field === 'number'
+      ? event.target.value
+      : cleanName(event.target.value);
+    render();
+    return;
+  }
+
+  if (event.target.matches('[data-photos]')) {
+    const selected = [...event.target.files].filter(isImage);
+    const remaining = Math.max(0, MAX_PHOTOS - person.photos.length);
+    const accepted = selected.slice(0, remaining);
+    accepted.forEach((file) => person.photos.push({ file, ext: fileExtension(file), url: URL.createObjectURL(file) }));
+    render();
+    if (selected.length > remaining) flash('每人最多两张，已忽略多余照片');
+    else if (accepted.length) flash(`已添加 ${accepted.length} 张照片`);
+    else flash('请选择图片文件');
+  }
+});
+
+grid.addEventListener('click', (event) => {
+  const card = event.target.closest('.person-card');
+  if (!card) return;
+  const personIndex = people.findIndex((item) => item.id === card.dataset.id);
+  if (personIndex < 0) return;
+
+  if (event.target.matches('[data-remove-person]')) {
+    releasePerson(people[personIndex]);
+    people.splice(personIndex, 1);
+    render();
+    return;
+  }
+
+  if (event.target.matches('[data-remove-photo]')) {
+    const photoIndex = Number(event.target.dataset.removePhoto);
+    const [photo] = people[personIndex].photos.splice(photoIndex, 1);
+    if (photo) URL.revokeObjectURL(photo.url);
+    render();
+  }
+});
+
+const crcTable = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n += 1) {
+    let value = n;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    table[n] = value >>> 0;
+  }
+  return table;
+})();
+
+function crc32(data) {
+  let value = 0xffffffff;
+  for (const byte of data) value = crcTable[(value ^ byte) & 255] ^ (value >>> 8);
+  return (value ^ 0xffffffff) >>> 0;
+}
+
+function u16(value) {
+  return new Uint8Array([value & 255, (value >>> 8) & 255]);
+}
+
+function u32(value) {
+  return new Uint8Array([value & 255, (value >>> 8) & 255, (value >>> 16) & 255, (value >>> 24) & 255]);
+}
+
+function join(chunks) {
+  const output = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.length, 0));
+  let position = 0;
+  chunks.forEach((chunk) => { output.set(chunk, position); position += chunk.length; });
+  return output;
+}
+
+async function bytesOf(value) {
+  if (typeof value === 'string') return new TextEncoder().encode(value);
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof Blob) return new Uint8Array(await value.arrayBuffer());
+  throw new Error('不支持的文件内容');
+}
+
+async function makeZip(entries) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  for (const entry of entries) {
+    const name = encoder.encode(entry.name);
+    const data = await bytesOf(entry.data);
+    const checksum = crc32(data);
+    const local = join([u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(0), u16(0), u32(checksum), u32(data.length), u32(data.length), u16(name.length), u16(0), name, data]);
+    localParts.push(local);
+    centralParts.push(join([u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(0), u16(0), u32(checksum), u32(data.length), u32(data.length), u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), name]));
+    offset += local.length;
+  }
+  const centralSize = centralParts.reduce((total, part) => total + part.length, 0);
+  const end = join([u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length), u32(centralSize), u32(offset), u16(0)]);
+  return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
+}
+
+function csvCell(value) {
+  return `"${String(value).replace(/"/g, '""')}"`;
+}
+
+function saveBlob(blob, name) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+}
+
+async function buildFinalZip() {
+  const entries = [];
+  const rows = ['完整编号,序号,姓名,照片数量,文件名'];
+  const sorted = people.slice().sort((a, b) => Number(a.number) - Number(b.number));
+  sorted.forEach((person) => {
+    const names = [];
+    person.photos.forEach((photo, index) => {
+      const name = `${photoBase(person, index)}.${photo.ext}`;
+      names.push(name);
+      entries.push({ name, data: photo.file });
+    });
+    rows.push([personCode(person), padNumber(person.number), cleanName(person.name), person.photos.length, names.join('；')].map(csvCell).join(','));
+  });
+  entries.unshift({ name: '照片汇总清单.csv', data: `\ufeff${rows.join('\r\n')}` });
+  return makeZip(entries);
+}
+
+$('#downloadFinal').addEventListener('click', async () => {
+  const issues = allIssues();
+  if (issues.length) {
+    flash(issues[0]);
+    return;
+  }
+  const button = $('#downloadFinal');
+  button.disabled = true;
+  button.textContent = '正在生成…';
+  try {
+    const blob = await buildFinalZip();
+    const date = new Date().toISOString().slice(0, 10);
+    saveBlob(blob, `${people.length}人照片最终版-${date}.zip`);
+    flash('最终总压缩包已生成');
+  } catch (error) {
+    console.error(error);
+    flash('生成失败，照片过大时建议分批处理');
+  } finally {
+    button.disabled = false;
+    button.textContent = '下载最终总 ZIP';
+  }
+});
+
+window.addEventListener('beforeunload', () => people.forEach(releasePerson));
+render();

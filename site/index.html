@@ -3,106 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="39人照片标准化收集、命名和本地汇总工具。">
-  <meta name="theme-color" content="#f7f4ec">
-  <title>图名匠｜39人照片收集助手</title>
+  <meta name="description" content="本地批量整理、统一命名并打包照片的小工具。">
+  <meta name="theme-color" content="#f4f0e7">
+  <title>图名匠｜本地批量命名工具</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
-      <div class="brand"><span class="mark"></span><span>图名匠</span><span class="edition">39 人收集版</span></div>
-      <div class="privacy">图片仅在你的设备中处理</div>
+      <div class="brand"><span class="mark"></span><b>图名匠</b><span>本地工具版</span></div>
+      <div class="local-badge">照片不上传 · 无需登录</div>
     </header>
 
     <section class="hero">
-      <div>
-        <div class="eyebrow">PHOTO COLLECTION · 01—41 / 39 PEOPLE</div>
-        <h1>一个人一包，<br><em>39 人一键汇总。</em></h1>
-        <p>参与者按统一规则整理照片，负责人检查收集进度，最后导出总压缩包或一张照片汇总长图。</p>
-      </div>
-      <div class="hero-card">
-        <div><b>01</b><span>填写姓名<br>选择照片</span></div>
-        <div><b>02</b><span>生成个人包<br>发送负责人</span></div>
-        <div><b>03</b><span>负责人汇总<br>导出最终版</span></div>
-      </div>
+      <p class="eyebrow">LOCAL PHOTO RENAMER</p>
+      <h1>几十人的照片，<br><em>一次整理成最终包。</em></h1>
+      <p>粘贴“序号＋姓名”名单，再给每个人选择一张或两张照片。工具自动统一命名，最后直接下载一个总压缩包。</p>
+      <div class="rule">固定命名：<b>2025213300</b> ＋ 两位序号 ＋ 姓名 ＋ 照片顺序</div>
     </section>
 
-    <nav class="mode-switch" aria-label="工作模式">
-      <button class="mode active" data-mode="participant"><span>我是参与者</span><small>整理并提交我的照片</small></button>
-      <button class="mode" data-mode="organizer"><span>我是负责人</span><small>汇总 39 人的照片</small></button>
-    </nav>
-
-    <section id="participantView" class="workspace view active" aria-label="参与者照片整理">
+    <section class="panel roster-panel">
       <div class="section-head">
-        <div><span class="section-no">01</span><h2>填写提交信息</h2></div>
-        <p>固定前缀为 2025213300，输入序号和姓名后自动生成统一文件名。</p>
+        <div><span class="step">01</span><div><h2>粘贴名单</h2><p>每行一个人，序号范围01—41；名单中没有的编号会自动跳过。</p></div></div>
       </div>
-      <div class="identity-grid">
-        <label class="field"><span>个人序号（01—41）</span><input id="personNo" type="number" min="1" max="41" inputmode="numeric" placeholder="例如：08"></label>
-        <label class="field"><span>姓名</span><input id="personName" maxlength="30" placeholder="请输入真实姓名"></label>
+      <textarea id="rosterInput" rows="7" placeholder="例如：&#10;01 张三&#10;02 李四&#10;04 王五"></textarea>
+      <div class="roster-actions">
+        <button class="primary" id="createRoster">生成照片清单</button>
+        <button class="secondary" id="addPerson">手动添加一人</button>
+        <span>也支持：01、张三 / 01,张三</span>
       </div>
-      <div class="inline-error" id="identityError" aria-live="polite"></div>
-      <p class="footnote">命名示例：提交一张时生成 <b>202521330001_张三_01.jpg</b>；提交两张时再生成 <b>202521330001_张三_02.jpg</b>。</p>
-
-      <div class="section-head second">
-        <div><span class="section-no">02</span><h2>添加照片</h2></div>
-        <p>可以提交一张或两张照片，保留原始格式和清晰度；文件名由系统统一生成。</p>
-      </div>
-      <div class="drop" id="photoDrop">
-        <input id="photoPicker" type="file" accept="image/*" multiple aria-label="选择照片">
-        <div><div class="drop-icon">＋</div><h3>把照片拖到这里</h3><p>或者<strong>点击选择照片</strong> · 每人可提交一张或两张</p></div>
-      </div>
-      <div class="photo-toolbar" id="photoToolbar">
-        <div><b id="photoCount">已选择 0/2 张</b><span id="photoStatus"></span></div>
-        <button class="ghost danger" id="clearPhotos">清空照片</button>
-      </div>
-      <div class="photo-grid" id="photoGrid"></div>
-
-      <div class="submit-bar" id="submitBar">
-        <div><b>最后一步</b><span>下载个人 ZIP 后，通过微信或其他方式发给负责人。</span></div>
-        <button class="primary" id="downloadPersonal">生成个人照片包</button>
-      </div>
+      <div class="inline-error" id="rosterError" aria-live="polite"></div>
     </section>
 
-    <section id="organizerView" class="workspace view" aria-label="负责人汇总台">
-      <div class="organizer-title">
-        <div><span class="section-no">总</span><div><h2>负责人汇总台</h2><p>一次拖入参与者从本网站生成的 ZIP，自动读取姓名、序号和照片。</p></div></div>
-        <span class="local-badge">本地汇总 · 不上传</span>
-      </div>
-      <div class="collection-settings">
-        <label class="field"><span>无需提交的编号（请填写两个）</span><input id="excludedNumbers" type="text" inputmode="numeric" placeholder="例如：16、18"></label>
-        <p id="configHint">编号范围为01—41；设置两个无需提交的编号后，应收人数就是39人。</p>
-      </div>
-      <div class="drop compact" id="zipDrop">
-        <input id="zipPicker" type="file" accept=".zip,application/zip" multiple aria-label="选择个人照片包">
-        <div><div class="drop-icon">⇧</div><h3>拖入收到的个人 ZIP</h3><p>可一次选择多个 · 仅识别“图名匠”生成的照片包</p></div>
+    <section class="panel people-panel">
+      <div class="section-head">
+        <div><span class="step">02</span><div><h2>给每个人添加照片</h2><p>每人可选择一张或两张；多余照片会自动忽略。</p></div></div>
+        <button class="text-button" id="clearAll">清空全部</button>
       </div>
 
-      <div class="stats" id="stats">
-        <div><strong id="receivedCount">0</strong><span>已收到人数</span></div>
-        <div><strong id="totalPhotoCount">0</strong><span>照片总数</span></div>
-        <div><strong id="missingCount">41</strong><span>还缺人数</span></div>
+      <div class="empty" id="emptyState">
+        <b>还没有名单</b>
+        <span>先在上方粘贴名单，或点击“手动添加一人”。</span>
       </div>
-
-      <div class="roster-card">
-        <div class="card-head"><div><h3>01—41 收集进度</h3><p id="rosterHint">请先设置两个无需提交的编号</p></div><button class="ghost danger" id="clearPackages">清空汇总</button></div>
-        <div class="number-grid" id="numberGrid"></div>
-      </div>
-
-      <div class="submission-card">
-        <div class="card-head"><div><h3>已导入名单</h3><p>重复序号会标红，请移除错误的一份后再导出。</p></div></div>
-        <div class="empty" id="submissionEmpty">收到个人 ZIP 后，这里会显示名单和照片数量。</div>
-        <div class="table-wrap"><table id="submissionTable"><thead><tr><th>完整编号</th><th>姓名</th><th>照片</th><th>文件包</th><th></th></tr></thead><tbody></tbody></table></div>
-      </div>
-
-      <div class="final-actions">
-        <div><h3>导出最终版</h3><p id="finalHint">可以随时导出当前已收集内容；收齐 39 人时会显示“已完成”。</p></div>
-        <div class="action-buttons"><button class="secondary" id="makeContactSheet" disabled>合成照片汇总长图</button><button class="primary" id="downloadMaster" disabled>下载最终总 ZIP</button></div>
-      </div>
+      <div class="people-grid" id="peopleGrid"></div>
     </section>
 
-    <p class="footnote">负责人处理大量照片时建议使用电脑；个人提交可直接使用手机。</p>
+    <section class="export-bar">
+      <div class="summary">
+        <div><strong id="personCount">0</strong><span>人数</span></div>
+        <div><strong id="photoCount">0</strong><span>照片</span></div>
+        <div><strong id="readyCount">0</strong><span>已完成</span></div>
+      </div>
+      <div class="export-copy"><h2>导出最终版</h2><p id="exportHint">添加名单和照片后，可以直接下载总压缩包。</p></div>
+      <button class="download" id="downloadFinal" disabled>下载最终总 ZIP</button>
+    </section>
+
+    <p class="privacy-note">所有照片只在当前浏览器中处理。刷新或关闭页面后，已选择的照片会被清空。</p>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>

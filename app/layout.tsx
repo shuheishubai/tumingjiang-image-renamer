@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "图名匠｜39人照片收集助手",
-  description: "39人照片标准化收集、命名和本地汇总工具。",
+  title: "图名匠｜本地批量命名工具",
+  description: "本地批量整理、统一命名并打包照片的小工具。",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
