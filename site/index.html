@@ -17,7 +17,7 @@
 
     <section class="hero">
       <div>
-        <div class="eyebrow">PHOTO COLLECTION · 01—39</div>
+        <div class="eyebrow">PHOTO COLLECTION · 01—41 / 39 PEOPLE</div>
         <h1>一个人一包，<br><em>39 人一键汇总。</em></h1>
         <p>参与者按统一规则整理照片，负责人检查收集进度，最后导出总压缩包或一张照片汇总长图。</p>
       </div>
@@ -39,7 +39,7 @@
         <p>固定前缀为 2025213300，输入序号和姓名后自动生成统一文件名。</p>
       </div>
       <div class="identity-grid">
-        <label class="field"><span>个人序号（01—39）</span><input id="personNo" type="number" min="1" max="39" inputmode="numeric" placeholder="例如：08"></label>
+        <label class="field"><span>个人序号（01—41）</span><input id="personNo" type="number" min="1" max="41" inputmode="numeric" placeholder="例如：08"></label>
         <label class="field"><span>姓名</span><input id="personName" maxlength="30" placeholder="请输入真实姓名"></label>
       </div>
       <div class="inline-error" id="identityError" aria-live="polite"></div>
@@ -70,6 +70,10 @@
         <div><span class="section-no">总</span><div><h2>负责人汇总台</h2><p>一次拖入参与者从本网站生成的 ZIP，自动读取姓名、序号和照片。</p></div></div>
         <span class="local-badge">本地汇总 · 不上传</span>
       </div>
+      <div class="collection-settings">
+        <label class="field"><span>无需提交的编号（请填写两个）</span><input id="excludedNumbers" type="text" inputmode="numeric" placeholder="例如：16、18"></label>
+        <p id="configHint">编号范围为01—41；设置两个无需提交的编号后，应收人数就是39人。</p>
+      </div>
       <div class="drop compact" id="zipDrop">
         <input id="zipPicker" type="file" accept=".zip,application/zip" multiple aria-label="选择个人照片包">
         <div><div class="drop-icon">⇧</div><h3>拖入收到的个人 ZIP</h3><p>可一次选择多个 · 仅识别“图名匠”生成的照片包</p></div>
@@ -78,11 +82,11 @@
       <div class="stats" id="stats">
         <div><strong id="receivedCount">0</strong><span>已收到人数</span></div>
         <div><strong id="totalPhotoCount">0</strong><span>照片总数</span></div>
-        <div><strong id="missingCount">39</strong><span>还缺人数</span></div>
+        <div><strong id="missingCount">41</strong><span>还缺人数</span></div>
       </div>
 
       <div class="roster-card">
-        <div class="card-head"><div><h3>01—39 收集进度</h3><p id="rosterHint">尚未导入个人照片包</p></div><button class="ghost danger" id="clearPackages">清空汇总</button></div>
+        <div class="card-head"><div><h3>01—41 收集进度</h3><p id="rosterHint">请先设置两个无需提交的编号</p></div><button class="ghost danger" id="clearPackages">清空汇总</button></div>
         <div class="number-grid" id="numberGrid"></div>
       </div>
 
