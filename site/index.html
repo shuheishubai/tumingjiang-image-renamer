@@ -3,62 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="本地批量整理、统一命名并打包照片的小工具。">
-  <meta name="theme-color" content="#f4f0e7">
-  <title>图名匠｜本地批量命名工具</title>
+  <meta name="description" content="每个人都能独立使用的本地照片命名工具。">
+  <meta name="theme-color" content="#f5f1e8">
+  <title>图名匠｜个人照片命名工具</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
-      <div class="brand"><span class="mark"></span><b>图名匠</b><span>本地工具版</span></div>
-      <div class="local-badge">照片不上传 · 无需登录</div>
+      <div class="brand"><span class="mark"></span><b>图名匠</b><span>个人工具版</span></div>
+      <div class="privacy-badge">本地处理 · 别人看不到</div>
     </header>
 
     <section class="hero">
-      <p class="eyebrow">LOCAL PHOTO RENAMER</p>
-      <h1>几十人的照片，<br><em>一次整理成最终包。</em></h1>
-      <p>粘贴“序号＋姓名”名单，再给每个人选择一张或两张照片。工具自动统一命名，最后直接下载一个总压缩包。</p>
-      <div class="rule">固定命名：<b>2025213300</b> ＋ 两位序号 ＋ 姓名 ＋ 照片顺序</div>
+      <div>
+        <p class="eyebrow">PERSONAL PHOTO RENAMER</p>
+        <h1>填自己的信息，<br><em>拿自己的照片包。</em></h1>
+        <p>每个人独立使用。照片不会上传，也不会和其他人的数据联通。</p>
+      </div>
+      <div class="steps">
+        <div><b>01</b><span>填写自己的<br>序号和姓名</span></div>
+        <div><b>02</b><span>选择一张<br>或两张照片</span></div>
+        <div><b>03</b><span>下载已命名的<br>个人照片包</span></div>
+      </div>
     </section>
 
-    <section class="panel roster-panel">
-      <div class="section-head">
-        <div><span class="step">01</span><div><h2>粘贴名单</h2><p>每行一个人，序号范围01—41；名单中没有的编号会自动跳过。</p></div></div>
+    <section class="workspace">
+      <div class="section-head"><span>01</span><div><h2>填写自己的信息</h2><p>序号范围为01—41，姓名会写入最终文件名。</p></div></div>
+      <div class="identity-grid">
+        <label class="field"><span>我的序号</span><input id="personNumber" type="number" min="1" max="41" inputmode="numeric" placeholder="例如：08"></label>
+        <label class="field"><span>我的姓名</span><input id="personName" maxlength="30" placeholder="请输入真实姓名"></label>
       </div>
-      <textarea id="rosterInput" rows="7" placeholder="例如：&#10;01 张三&#10;02 李四&#10;04 王五"></textarea>
-      <div class="roster-actions">
-        <button class="primary" id="createRoster">生成照片清单</button>
-        <button class="secondary" id="addPerson">手动添加一人</button>
-        <span>也支持：01、张三 / 01,张三</span>
+      <div class="inline-error" id="identityError" aria-live="polite"></div>
+
+      <div class="section-head second"><span>02</span><div><h2>选择自己的照片</h2><p>可以选择一张或两张，最多两张。</p></div></div>
+      <label class="drop-zone" id="dropZone">
+        <input id="photoPicker" type="file" accept="image/*" multiple>
+        <div class="plus">＋</div>
+        <div><h3>点击选择照片</h3><p>也可以把照片拖到这里 · 支持一张或两张</p></div>
+      </label>
+
+      <div class="photo-toolbar" id="photoToolbar">
+        <div><b id="photoCount">已选择 0/2 张</b><span id="photoHint"></span></div>
+        <button id="clearPhotos" class="text-button">清空照片</button>
       </div>
-      <div class="inline-error" id="rosterError" aria-live="polite"></div>
+      <div class="photo-grid" id="photoGrid"></div>
+
+      <div class="example">
+        <span>命名示例</span>
+        <code>202521330001_张三_01.jpg</code>
+        <code>202521330001_张三_02.jpg</code>
+      </div>
+
+      <div class="download-bar">
+        <div><h2>下载我的照片包</h2><p>压缩包里只包含你刚才选择并自动命名的照片。</p></div>
+        <button id="downloadPersonal" disabled>生成并下载</button>
+      </div>
     </section>
 
-    <section class="panel people-panel">
-      <div class="section-head">
-        <div><span class="step">02</span><div><h2>给每个人添加照片</h2><p>每人可选择一张或两张；多余照片会自动忽略。</p></div></div>
-        <button class="text-button" id="clearAll">清空全部</button>
-      </div>
-
-      <div class="empty" id="emptyState">
-        <b>还没有名单</b>
-        <span>先在上方粘贴名单，或点击“手动添加一人”。</span>
-      </div>
-      <div class="people-grid" id="peopleGrid"></div>
+    <section class="privacy-card">
+      <b>你的照片只属于你</b>
+      <p>本工具没有账号、数据库、上传接口或管理后台。照片只在当前手机或电脑的浏览器中处理，其他使用者和网站维护者都看不到。</p>
     </section>
-
-    <section class="export-bar">
-      <div class="summary">
-        <div><strong id="personCount">0</strong><span>人数</span></div>
-        <div><strong id="photoCount">0</strong><span>照片</span></div>
-        <div><strong id="readyCount">0</strong><span>已完成</span></div>
-      </div>
-      <div class="export-copy"><h2>导出最终版</h2><p id="exportHint">添加名单和照片后，可以直接下载总压缩包。</p></div>
-      <button class="download" id="downloadFinal" disabled>下载最终总 ZIP</button>
-    </section>
-
-    <p class="privacy-note">所有照片只在当前浏览器中处理。刷新或关闭页面后，已选择的照片会被清空。</p>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
