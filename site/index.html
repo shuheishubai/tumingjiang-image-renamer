@@ -43,18 +43,18 @@
         <label class="field"><span>姓名</span><input id="personName" maxlength="30" placeholder="请输入真实姓名"></label>
       </div>
       <div class="inline-error" id="identityError" aria-live="polite"></div>
-      <p class="footnote">命名示例：01号张三的照片将生成 <b>202521330001_张三_01.jpg</b>，多张照片末尾依次为 02、03……</p>
+      <p class="footnote">命名示例：两张照片自动生成为 <b>202521330001_张三_01.jpg</b> 和 <b>202521330001_张三_02.jpg</b>。</p>
 
       <div class="section-head second">
         <div><span class="section-no">02</span><h2>添加照片</h2></div>
-        <p>支持多张照片，保留原始格式和清晰度；文件名由系统统一生成。</p>
+        <p>请选择两张照片，保留原始格式和清晰度；文件名由系统统一生成。</p>
       </div>
       <div class="drop" id="photoDrop">
         <input id="photoPicker" type="file" accept="image/*" multiple aria-label="选择照片">
-        <div><div class="drop-icon">＋</div><h3>把照片拖到这里</h3><p>或者<strong>点击选择照片</strong> · 可一次选择多张</p></div>
+        <div><div class="drop-icon">＋</div><h3>把两张照片拖到这里</h3><p>或者<strong>点击选择两张照片</strong> · 每人必须提交两张</p></div>
       </div>
       <div class="photo-toolbar" id="photoToolbar">
-        <div><b id="photoCount">已选择 0 张</b><span id="photoStatus"></span></div>
+        <div><b id="photoCount">已选择 0/2 张</b><span id="photoStatus"></span></div>
         <button class="ghost danger" id="clearPhotos">清空照片</button>
       </div>
       <div class="photo-grid" id="photoGrid"></div>
