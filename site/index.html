@@ -43,15 +43,15 @@
         <label class="field"><span>姓名</span><input id="personName" maxlength="30" placeholder="请输入真实姓名"></label>
       </div>
       <div class="inline-error" id="identityError" aria-live="polite"></div>
-      <p class="footnote">命名示例：两张照片自动生成为 <b>202521330001_张三_01.jpg</b> 和 <b>202521330001_张三_02.jpg</b>。</p>
+      <p class="footnote">命名示例：提交一张时生成 <b>202521330001_张三_01.jpg</b>；提交两张时再生成 <b>202521330001_张三_02.jpg</b>。</p>
 
       <div class="section-head second">
         <div><span class="section-no">02</span><h2>添加照片</h2></div>
-        <p>请选择两张照片，保留原始格式和清晰度；文件名由系统统一生成。</p>
+        <p>可以提交一张或两张照片，保留原始格式和清晰度；文件名由系统统一生成。</p>
       </div>
       <div class="drop" id="photoDrop">
         <input id="photoPicker" type="file" accept="image/*" multiple aria-label="选择照片">
-        <div><div class="drop-icon">＋</div><h3>把两张照片拖到这里</h3><p>或者<strong>点击选择两张照片</strong> · 每人必须提交两张</p></div>
+        <div><div class="drop-icon">＋</div><h3>把照片拖到这里</h3><p>或者<strong>点击选择照片</strong> · 每人可提交一张或两张</p></div>
       </div>
       <div class="photo-toolbar" id="photoToolbar">
         <div><b id="photoCount">已选择 0/2 张</b><span id="photoStatus"></span></div>
