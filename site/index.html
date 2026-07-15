@@ -36,17 +36,18 @@
     <section id="participantView" class="workspace view active" aria-label="参与者照片整理">
       <div class="section-head">
         <div><span class="section-no">01</span><h2>填写提交信息</h2></div>
-        <p>你的编号和姓名会自动写进文件名，方便负责人核对。</p>
+        <p>固定前缀为 2025213300，输入序号和姓名后自动生成统一文件名。</p>
       </div>
       <div class="identity-grid">
         <label class="field"><span>个人序号（01—39）</span><input id="personNo" type="number" min="1" max="39" inputmode="numeric" placeholder="例如：08"></label>
         <label class="field"><span>姓名</span><input id="personName" maxlength="30" placeholder="请输入真实姓名"></label>
       </div>
       <div class="inline-error" id="identityError" aria-live="polite"></div>
+      <p class="footnote">命名示例：01号张三的照片将生成 <b>202521330001_张三_01.jpg</b>，多张照片末尾依次为 02、03……</p>
 
       <div class="section-head second">
         <div><span class="section-no">02</span><h2>添加照片</h2></div>
-        <p>支持多张照片，保留原始格式和清晰度。</p>
+        <p>支持多张照片，保留原始格式和清晰度；文件名由系统统一生成。</p>
       </div>
       <div class="drop" id="photoDrop">
         <input id="photoPicker" type="file" accept="image/*" multiple aria-label="选择照片">
@@ -88,7 +89,7 @@
       <div class="submission-card">
         <div class="card-head"><div><h3>已导入名单</h3><p>重复序号会标红，请移除错误的一份后再导出。</p></div></div>
         <div class="empty" id="submissionEmpty">收到个人 ZIP 后，这里会显示名单和照片数量。</div>
-        <div class="table-wrap"><table id="submissionTable"><thead><tr><th>序号</th><th>姓名</th><th>照片</th><th>文件包</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="table-wrap"><table id="submissionTable"><thead><tr><th>完整编号</th><th>姓名</th><th>照片</th><th>文件包</th><th></th></tr></thead><tbody></tbody></table></div>
       </div>
 
       <div class="final-actions">

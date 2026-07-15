@@ -13,11 +13,15 @@ assert.match(html, /id="organizerView"/);
 assert.match(html, /accept="image\/\*"[^>]+multiple/);
 assert.match(html, /accept="\.zip,application\/zip"[^>]+multiple/);
 assert.match(html, /图片仅在你的设备中处理/);
+assert.match(html, /202521330001_张三_01\.jpg/);
 assert.match(css, /\.number-cell\.duplicate/);
 assert.match(js, /function cleanName/);
 assert.match(js, /async function makeZip/);
 assert.match(js, /function parseStoredZip/);
 assert.match(js, /async function createContactSheet/);
+assert.match(js, /const CODE_PREFIX='2025213300'/);
+assert.match(js, /version:3/);
+assert.match(js, /readonly/);
 new Function(js);
 
 const workerUrl = pathToFileURL(resolve(root, "dist/server/index.js")).href + `?v=${Date.now()}`;
