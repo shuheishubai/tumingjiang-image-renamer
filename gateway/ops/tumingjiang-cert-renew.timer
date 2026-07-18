@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the Tumingjiang HTTPS certificate twice daily
+
+[Timer]
+OnCalendar=*-*-* 03,15:17:00
+RandomizedDelaySec=45m
+Persistent=true
+Unit=tumingjiang-cert-renew.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[DEFAULT]
+bantime = 1h
+findtime = 10m
+maxretry = 4
+backend = systemd
+banaction = ufw
+
+[sshd]
+enabled = true
+port = 22
+mode = aggressive

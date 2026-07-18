@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eee9dc">
+  <title>片刻｜密钥管理</title>
+  <style>
+    :root{--paper:#eee9dc;--ink:#25241f;--muted:#777265;--line:#cfc7b7;--accent:#b65035;--ok:#2f684d}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:radial-gradient(#6e6758 .55px,transparent .6px);background-size:6px 6px}
+    main{position:relative;width:min(100% - 32px,920px);margin:auto;padding:42px 0 80px}header{display:flex;align-items:end;justify-content:space-between;padding-bottom:22px;border-bottom:3px solid var(--ink)}
+    h1{margin:0;font:500 clamp(36px,7vw,62px)/1 Georgia,"Songti SC",serif}header nav{display:flex;gap:14px}a,button{color:inherit}header a,header button{border:0;background:none;padding:5px 0;text-decoration:none;font-weight:700;cursor:pointer}
+    .lead{max-width:620px;color:var(--muted);line-height:1.75;margin:26px 0 34px}.panel{border-top:1px solid var(--line);padding:24px 0 32px}
+    h2{margin:0 0 20px;font:500 26px Georgia,"Songti SC",serif}.grid{display:grid;grid-template-columns:1.2fr 1.5fr .7fr auto;gap:14px;align-items:end}
+    label{display:grid;gap:8px;font-size:12px;font-weight:700}input{width:100%;border:0;border-bottom:1px solid var(--ink);background:transparent;padding:11px 2px;font:500 15px ui-monospace,monospace;outline:none}
+    .primary{height:42px;border:0;background:var(--ink);color:var(--paper);padding:0 18px;font-weight:700;cursor:pointer}.primary:disabled{opacity:.5}
+    .result{display:none;margin-top:22px;padding:20px;border-left:4px solid var(--ok);background:rgba(255,255,255,.36)}.result.show{display:block}.result code{display:block;margin:12px 0;padding:12px;background:var(--ink);color:#fff;overflow-wrap:anywhere}
+    .result button{border:1px solid var(--ink);background:transparent;padding:8px 12px;cursor:pointer}.note{color:var(--muted);font-size:12px;line-height:1.7}
+    .keys{display:grid}.key{display:grid;grid-template-columns:1.3fr .75fr .85fr auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
+    .key b{display:block}.key small{color:var(--muted)}.pill{justify-self:start;border:1px solid var(--line);border-radius:99px;padding:4px 9px;font-size:11px}
+    .danger{border:0;background:none;color:var(--accent);font-weight:700;cursor:pointer}.empty{color:var(--muted);padding:24px 0}.status{min-height:24px;color:var(--accent);font-size:13px}
+    @media(max-width:720px){header{align-items:start;gap:22px;flex-direction:column}.grid{grid-template-columns:1fr}.key{grid-template-columns:1fr auto}.key .dates{grid-column:1/-1}.key .pill{grid-row:1;grid-column:2}.danger{grid-column:2;grid-row:2}}
+  </style>
+</head>
+<body>
+  <main>
+    <header><h1>密钥管理</h1><nav><a href="/">返回工具</a><button id="logout" type="button">退出</button></nav></header>
+      <p class="lead">在这里创建给别人使用的六位访问码。服务器只保存不可逆哈希；访问码只会完整显示一次。管理员密钥仍单独保留。</p>
+    <section class="panel">
+      <h2>创建访问密钥</h2>
+      <form class="grid" id="createForm">
+        <label>给谁使用<input id="label" maxlength="40" placeholder="例如：摄影社同学" required></label>
+        <label>自定义六位码（可留空）<input id="customKey" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="new-password" placeholder="留空自动生成六位数字"></label>
+        <label>有效天数<input id="expiresDays" type="number" min="0" max="3650" value="30"><small>0代表长期</small></label>
+        <button class="primary" id="createButton" type="submit">生成访问码</button>
+      </form>
+      <p class="status" id="status" role="alert"></p>
+      <div class="result" id="result"><b>请现在复制，关闭后无法再次查看：</b><code id="newKey"></code><button id="copyKey" type="button">复制访问码</button></div>
+    </section>
+    <section class="panel">
+      <h2>已有密钥</h2>
+      <div class="keys" id="keys"><p class="empty">正在读取…</p></div>
+    </section>
+    <p class="note">六位码便于日常输入，因此系统会严格限制连续试错。管理员密钥不能在网页中停用；访问码被停用后，使用它建立的会话也会立即失效。</p>
+  </main>
+  <script>
+    const keysNode=document.querySelector('#keys');const statusNode=document.querySelector('#status');const resultNode=document.querySelector('#result');const newKeyNode=document.querySelector('#newKey');
+    const esc=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const date=value=>value?new Date(value).toLocaleString('zh-CN'):'—';
+    async function api(url,options={}){const response=await fetch(url,{credentials:'same-origin',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const body=await response.json();if(!response.ok)throw new Error(body.error||'操作失败');return body}
+    async function loadKeys(){try{const data=await api('/api/access/keys');keysNode.innerHTML=data.keys.map(key=>`<article class="key"><div><b>${esc(key.label)}</b><small>尾号 ${esc(key.lastFour)}</small></div><span class="pill">${key.role==='owner'?'管理密钥':key.disabled?'已停用':'使用中'}</span><div class="dates"><small>创建 ${date(key.createdAt)}<br>最近使用 ${date(key.lastUsedAt)}</small></div>${key.role==='viewer'&&!key.disabled?`<button class="danger" data-disable="${key.id}" type="button">停用</button>`:''}</article>`).join('')||'<p class="empty">还没有分享密钥</p>'}catch(error){if(/登录/.test(error.message))location.replace('/access/?next=/access/manage.html');else keysNode.innerHTML=`<p class="empty">${esc(error.message)}</p>`}}
+    document.querySelector('#createForm').addEventListener('submit',async event=>{event.preventDefault();const button=document.querySelector('#createButton');button.disabled=true;statusNode.textContent='正在安全生成…';resultNode.classList.remove('show');try{const data=await api('/api/access/keys',{method:'POST',body:JSON.stringify({label:document.querySelector('#label').value,customKey:document.querySelector('#customKey').value,expiresDays:document.querySelector('#expiresDays').value})});newKeyNode.textContent=data.key;resultNode.classList.add('show');document.querySelector('#customKey').value='';statusNode.textContent='密钥已创建';await loadKeys()}catch(error){statusNode.textContent=error.message}finally{button.disabled=false}});
+    document.querySelector('#copyKey').addEventListener('click',async()=>{await navigator.clipboard.writeText(newKeyNode.textContent);document.querySelector('#copyKey').textContent='已复制'});
+    keysNode.addEventListener('click',async event=>{const button=event.target.closest('[data-disable]');if(!button||!confirm('停用后，正在使用这枚密钥的人也会退出。确定停用吗？'))return;button.disabled=true;try{await api(`/api/access/keys/${button.dataset.disable}`,{method:'DELETE'});await loadKeys()}catch(error){statusNode.textContent=error.message}});
+    document.querySelector('#logout').addEventListener('click',async()=>{await api('/api/access/logout',{method:'POST',body:'{}'});location.replace('/access/')});
+    loadKeys();
+  </script>
+</body>
+</html>

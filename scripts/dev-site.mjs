@@ -9,6 +9,11 @@ const assets = {
   "/index.html": ["index.html", "text/html; charset=utf-8"],
   "/styles.css": ["styles.css", "text/css; charset=utf-8"],
   "/app.js": ["app.js", "text/javascript; charset=utf-8"],
+  "/assistant": ["assistant/index.html", "text/html; charset=utf-8"],
+  "/assistant/": ["assistant/index.html", "text/html; charset=utf-8"],
+  "/assistant/index.html": ["assistant/index.html", "text/html; charset=utf-8"],
+  "/assistant/assistant.css": ["assistant/assistant.css", "text/css; charset=utf-8"],
+  "/assistant/assistant.js": ["assistant/assistant.js", "text/javascript; charset=utf-8"],
 };
 const server = createServer(async (request, response) => {
   if (request.url === "/favicon.ico") return response.writeHead(204).end();

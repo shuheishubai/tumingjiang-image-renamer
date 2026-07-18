@@ -1,0 +1,10 @@
+/opt/tumingjiang/security/data/auth.log /opt/tumingjiang/security/logs/nginx/*.log {
+    daily
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    su root root
+}

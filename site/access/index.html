@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eee9dc">
+  <title>访问片刻</title>
+  <style>
+    :root{color-scheme:light;--paper:#eee9dc;--ink:#25241f;--muted:#777265;--line:#cfc7b7;--accent:#b65035}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--paper);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:radial-gradient(#6e6758 .55px,transparent .6px);background-size:6px 6px}
+    main{position:relative;width:min(92vw,440px);padding:40px 34px 32px;border-top:3px solid var(--ink)}
+    .kicker{margin:0 0 26px;font:600 11px/1.2 ui-monospace,monospace;letter-spacing:.2em;color:var(--muted)}
+    h1{margin:0;font-family:Georgia,"Songti SC",serif;font-size:clamp(42px,12vw,66px);font-weight:500;line-height:.95}
+    .intro{margin:22px 0 34px;max-width:26em;color:var(--muted);line-height:1.8}
+    label{display:block;margin-bottom:9px;font-size:13px;font-weight:700}
+    .keyline{display:flex;border-bottom:1px solid var(--ink)}
+    input{min-width:0;flex:1;border:0;background:transparent;padding:14px 4px;font:500 17px/1.2 ui-monospace,monospace;outline:none}
+    button{border:0;background:var(--ink);color:var(--paper);padding:0 20px;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.55;cursor:wait}.message{min-height:24px;margin:14px 0 0;color:var(--accent);font-size:13px}
+    footer{margin-top:54px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+    .shield{width:44px;height:52px;border:2px solid var(--ink);border-radius:22px 22px 28px 28px  / 16px 16px 36px 36px;display:grid;place-items:center;margin-bottom:26px;font:700 13px ui-monospace,monospace}
+    @media(max-width:520px){main{padding:30px 22px 24px}.keyline{display:block}.keyline button{width:100%;height:48px;margin-top:8px}}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="shield">KEY</div>
+    <p class="kicker">PRIVATE PHOTO DESK</p>
+    <h1>先对暗号，<br>再进来。</h1>
+    <p class="intro" id="loginIntro">这是一个受保护的私人图片工具。照片默认只在你的设备里处理；只有你主动生成临时下载链接时，Word 文档才会短暂上传，并在 10 分钟后自动删除。</p>
+    <form id="loginForm">
+      <label for="accessKey" id="accessLabel">六位访问码</label>
+      <div class="keyline"><input id="accessKey" name="accessKey" type="password" inputmode="text" maxlength="96" autocomplete="current-password" placeholder="输入六位访问码" required autofocus><button id="submitButton" type="submit">进入</button></div>
+      <p class="message" id="message" role="alert"></p>
+    </form>
+    <footer><span>片刻 · 本地图片工具</span><span>安全会话 12 小时</span></footer>
+  </main>
+  <script>
+    const form=document.querySelector('#loginForm');
+    const input=document.querySelector('#accessKey');
+    const button=document.querySelector('#submitButton');
+    const message=document.querySelector('#message');
+    const params=new URLSearchParams(location.search);
+    const requested=params.get('next')||'/';
+    const next=requested.startsWith('/')&&!requested.startsWith('//')?requested:'/';
+    const ownerMode=params.get('owner')==='1'||next==='/access/manage.html';
+    if(ownerMode){
+      document.querySelector('#accessLabel').textContent='管理员密钥';
+      document.querySelector('#loginIntro').textContent='这里是站长入口。请使用你设置的管理员密钥；普通访问码不能管理其他密钥。';
+      input.placeholder='输入管理员密钥';
+      message.textContent='管理员密钥只用于你本人管理，请勿转发给其他人。';
+    }
+    fetch('/api/access/status',{credentials:'same-origin'}).then(r=>r.json()).then(s=>{
+      if(s.authenticated&&(!ownerMode||s.role==='owner'))location.replace(next);
+      else if(ownerMode&&s.authenticated)message.textContent='当前登录的是普通访问码，请在此输入管理员密钥。';
+    }).catch(()=>{});
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();button.disabled=true;message.textContent='正在核对…';
+      try{
+        const response=await fetch('/api/access/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:input.value})});
+        const result=await response.json();
+        if(!response.ok)throw new Error(result.error||'暂时无法登录');
+        input.value='';location.replace(next);
+      }catch(error){message.textContent=error.message;input.select();button.disabled=false}
+    });
+  </script>
+</body>
+</html>

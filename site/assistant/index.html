@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="照片这点小事交给我吧：本地需求筛选、报价和回复助手。">
+  <meta name="theme-color" content="#f2ede2">
+  <title>秒回接单助手</title>
+  <link rel="stylesheet" href="assistant.css?v=20260718-3">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <main class="shell">
+    <header class="topbar">
+      <a href="/" class="back">← 图片工具</a>
+      <div class="identity"><b>照片这点小事交给我吧</b><span>店主工作台</span></div>
+      <span class="local-mark">本地判断 · AI 仅店主</span>
+    </header>
+
+    <section class="hero">
+      <p>SECOND-REPLY DESK</p>
+      <h1>顾客说一句，<em>马上知道怎么接。</em></h1>
+      <span>粘贴顾客的话，自动判断能不能做、还缺什么、建议价格和怎么回复。内容只在当前设备处理。</span>
+    </section>
+
+    <section class="hosting-strip" aria-label="智能托管流程">
+      <header><i>托管 1.0</i><b>从顾客消息到交付，串成一条线</b><span>最后发送由店主确认</span></header>
+      <ol>
+        <li><i>1</i><span><b>粘贴消息</b><small>识别需求与风险</small></span></li>
+        <li><i>2</i><span><b>自动建单</b><small>报价与缺项提醒</small></span></li>
+        <li><i>3</i><span><b>带参数修图</b><small>尺寸、KB、格式预填</small></span></li>
+        <li><i>4</i><span><b>质检后交付</b><small>生成可复制回复</small></span></li>
+      </ol>
+    </section>
+
+    <section class="desk">
+      <article class="intake">
+        <div class="section-label"><i>01</i><div><b>粘贴顾客需求</b><span>不必整理，原话放进来就行</span></div></div>
+        <textarea id="customerMessage" rows="8" maxlength="3000" placeholder="例如：四六级照片要改成 144×192、20KB 内、蓝底，今天晚上要，能做吗？"></textarea>
+        <div class="examples" aria-label="快速填入示例">
+          <button type="button" data-example="报名">报名照</button>
+          <button type="button" data-example="换底">换底色</button>
+          <button type="button" data-example="基础">尺寸 / KB</button>
+          <button type="button" data-example="批量">批量改名</button>
+          <button type="button" data-example="复杂">复杂修图</button>
+        </div>
+        <div class="intake-actions">
+          <button class="quiet" id="pasteRequest" type="button">从剪贴板粘贴</button>
+          <button class="primary" id="analyzeRequest" type="button">立即判断</button>
+          <button class="quiet" id="clearRequest" type="button">清空</button>
+          <small>快捷键：Ctrl / ⌘ + Enter</small>
+        </div>
+      </article>
+
+      <article class="decision" id="decision" aria-live="polite">
+        <div class="empty-state" id="emptyState">
+          <i>?</i>
+          <b>等待一条顾客消息</b>
+          <span>判断通常在一眨眼内完成，不会上传照片或聊天内容。</span>
+        </div>
+        <div class="decision-content" id="decisionContent" hidden>
+          <div class="decision-head">
+            <span class="status-badge" id="statusBadge">可以直接接</span>
+            <small id="decisionTime">本地判断</small>
+          </div>
+          <h2 id="decisionTitle">基础图片处理</h2>
+          <p id="decisionSummary"></p>
+          <div class="facts">
+            <div><small>建议报价</small><b id="suggestedPrice">0.99 元</b></div>
+            <div><small>预计处理</small><b id="estimatedTime">3—5 分钟</b></div>
+            <div><small>下一步</small><b id="nextAction">确认参数后下单</b></div>
+          </div>
+          <div class="needs">
+            <small>下单前还要确认</small>
+            <ul id="requiredList"></ul>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="reply-panel">
+      <div class="section-label"><i>02</i><div><b>回复已经写好</b><span>自动生成，但由你确认后再发给顾客</span></div></div>
+      <textarea id="replyDraft" rows="8" maxlength="3000" placeholder="完成判断后，这里会出现可直接发送的回复。"></textarea>
+      <div class="reply-actions">
+        <button class="primary" id="copyReply" type="button" disabled>复制回复</button>
+        <button id="copyGreeting" type="button">复制首次问候</button>
+        <button id="saveCase" type="button" disabled>存入接单板</button>
+        <button id="startJob" type="button" disabled>建单并打开图片工具</button>
+      </div>
+      <p class="safety-note">助手不会自动读取或发送闲鱼消息；涉及证件、证明、票据关键信息修改和未授权去水印的需求会直接拒绝。</p>
+      <div class="delivery-box" id="deliveryBox" hidden>
+        <div><b>交付回复</b><span>完成修图或质检后生成</span></div>
+        <textarea id="deliveryDraft" rows="5" maxlength="1800"></textarea>
+        <button class="primary" id="copyDelivery" type="button">复制交付回复</button>
+      </div>
+    </section>
+
+    <section class="workbench">
+      <div class="section-label"><i>03</i><div><b>双候选质检台</b><span>网站成品做候选 A；符合条件时再生成 GPT Image 2 候选 B</span></div></div>
+      <div class="qc-grid">
+        <div class="qc-controls">
+          <label class="file-drop" for="qcFile">
+            <b>导入网站生成的成品</b>
+            <span>PNG、JPG 或 WebP，最大 8MB。图片不会存入接单板。</span>
+            <input id="qcFile" type="file" accept="image/png,image/jpeg,image/webp">
+          </label>
+          <label class="field-label" for="aiInstruction">需要 GPT Image 2 复核的画面要求</label>
+          <textarea id="aiInstruction" rows="4" maxlength="1200" placeholder="只写画面修改要求，例如：清理头发边缘残留的蓝色光晕，保持人脸、衣服、构图和文字不变。不要填写顾客姓名、电话等信息。"></textarea>
+          <div class="qc-options">
+            <label>参考图质量
+              <select id="aiQuality">
+                <option value="low">低｜快速试稿</option>
+                <option value="medium">中｜最终候选</option>
+              </select>
+            </label>
+            <label class="consent"><input id="aiConsent" type="checkbox"> 顾客已明确同意图片上传至 OpenAI</label>
+          </div>
+          <div class="qc-actions">
+            <button class="primary" id="runLocalQc" type="button" disabled>精确参数质检</button>
+            <button id="generateAiCandidate" type="button" disabled>生成 AI 候选 B</button>
+          </div>
+          <ul class="qc-results" id="qcResults">
+            <li class="neutral">先导入网站成品，再根据顾客原话核对尺寸、KB 和格式。</li>
+          </ul>
+          <p class="safety-note">尺寸、KB、格式、文件名和文字类任务只做精确程序质检，不调用生成式图片。换底、去除、修边和创意修图才生成第二候选图；即使通过自动对比，也必须由店主确认后再交付。</p>
+        </div>
+        <div class="compare-grid">
+          <figure>
+            <figcaption><b>候选 A</b><span>你的网站生成</span></figcaption>
+            <div class="preview-frame"><span id="candidateAEmpty">等待导入</span><img id="candidateA" alt="网站生成候选图" hidden></div>
+          </figure>
+          <figure>
+            <figcaption><b>候选 B</b><span>GPT Image 2 参考</span></figcaption>
+            <div class="preview-frame"><span id="candidateBEmpty">尚未生成</span><img id="candidateB" alt="GPT Image 2 候选图" hidden></div>
+            <a id="downloadAiCandidate" href="#" download="GPT-Image-2-候选.jpg" hidden>下载候选 B</a>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="board">
+      <div class="board-head">
+        <div class="section-label"><i>04</i><div><b>接单板</b><span>只保存文字摘要，不保存顾客照片</span></div></div>
+        <div>
+          <button id="exportCases" type="button">导出记录</button>
+          <button id="clearCompleted" type="button">清理已完成</button>
+        </div>
+      </div>
+      <div class="board-stages" aria-hidden="true">
+        <span>待补充</span><i>→</i><span>已报价</span><i>→</i><span>处理中</span><i>→</i><span>待验收</span><i>→</i><span>已完成</span>
+      </div>
+      <div class="case-list" id="caseList">
+        <p class="no-cases">还没有订单。判断需求后点“存入接单板”。</p>
+      </div>
+    </section>
+
+    <footer>
+      <b>秒回接单助手</b>
+      <span>0.99 元体验价 · AI 调用需顾客同意 · 店主确认后发送</span>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="assistant.js?v=20260718-3" defer></script>
+</body>
+</html>

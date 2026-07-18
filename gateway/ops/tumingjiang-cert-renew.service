@@ -1,0 +1,12 @@
+[Unit]
+Description=Renew the short-lived HTTPS certificate for the Tumingjiang site
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker run --rm --name tumingjiang-certbot-renew -v /opt/letsencrypt:/etc/letsencrypt -v /opt/tumingjiang/acme:/var/www/acme -v /opt/tumingjiang/security/certbot-lib:/var/lib/letsencrypt -v /opt/tumingjiang/security/certbot-log:/var/log/letsencrypt certbot/certbot:latest renew --quiet
+ExecStartPost=/bin/sh -c '/usr/bin/docker kill --signal=HUP tumingjiang-site >/dev/null 2>&1 || true'
+
+[Install]
+WantedBy=multi-user.target

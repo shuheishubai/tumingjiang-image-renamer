@@ -3,70 +3,412 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="每个人都能独立使用的本地照片命名工具。">
-  <meta name="theme-color" content="#f5f1e8">
-  <title>图名匠｜个人照片命名工具</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="片刻是一款在浏览器本地完成改名、裁剪、调色、压缩和人物抠图的图片工具。">
+  <meta name="theme-color" content="#eee9dc">
+  <title>片刻｜本地图片工具</title>
+  <link rel="stylesheet" href="styles.css?v=20260717-chroma-v3">
 </head>
 <body>
-  <main class="shell">
-    <header class="topbar">
-      <div class="brand"><span class="mark"></span><b>图名匠</b><span>个人工具版</span></div>
-      <div class="privacy-badge">本地处理 · 别人看不到</div>
+  <div class="paper-noise" aria-hidden="true"></div>
+  <div class="page" id="top">
+    <header class="masthead">
+      <a class="brand" href="#top"><strong>片刻</strong><span>本地图片工具</span></a>
+      <p>默认只在你的设备处理</p>
     </header>
 
-    <section class="hero">
-      <div>
-        <p class="eyebrow">PERSONAL PHOTO RENAMER</p>
-        <h1>填自己的信息，<br><em>拿自己的照片包。</em></h1>
-        <p>每个人独立使用。照片不会上传，也不会和其他人的数据联通。</p>
-      </div>
-      <div class="steps">
-        <div><b>01</b><span>填写自己的<br>序号和姓名</span></div>
-        <div><b>02</b><span>选择一张<br>或两张照片</span></div>
-        <div><b>03</b><span>下载已命名的<br>个人照片包</span></div>
-      </div>
+    <aside class="wechat-open-tip" id="wechatOpenTip" hidden>
+      <i>微信内模式</i>
+      <p><b>普通图片可以直接长按保存。</b><span>如果一定要下载 ZIP，请先点右上角“…”选择“在浏览器打开”，再重新选择图片。</span></p>
+    </aside>
+
+    <aside class="job-handoff" id="jobHandoff" hidden>
+      <div><i>接单助手</i><p><b id="jobHandoffTitle">已接收订单参数</b><span id="jobHandoffDetail">选择顾客原图后，尺寸、KB、格式和底色会自动套用。</span></p></div>
+      <a id="returnAssistant" href="/assistant/">完成后返回接单助手</a>
+    </aside>
+
+    <section class="intro">
+      <p class="kicker">A SMALL PHOTO DESK</p>
+      <h1>照片的事，<br><em>顺手做完。</em></h1>
+      <p class="lead">改名、裁剪、调色、压缩，或把人物从背景里取出来。默认不上传；只有你主动生成临时下载链接时，Word 才会短暂经过服务器。</p>
+      <aside class="hero-note"><b>本地完成</b><span>选图后即可开始<br>离开页面自动清空</span></aside>
     </section>
 
-    <section class="workspace">
-      <div class="section-head"><span>01</span><div><h2>填写自己的信息</h2><p>序号范围为01—41，姓名会写入最终文件名。</p></div></div>
-      <div class="identity-grid">
-        <label class="field"><span>我的序号</span><input id="personNumber" type="number" min="1" max="41" inputmode="numeric" placeholder="例如：08"></label>
-        <label class="field"><span>我的姓名</span><input id="personName" maxlength="30" placeholder="请输入真实姓名"></label>
+    <main class="workbench">
+      <section class="pick-area" aria-labelledby="pickTitle">
+        <div class="section-title"><span>选择</span><div><h2 id="pickTitle">把照片放到桌面上</h2><p>一次可以选择多张，也可以直接拍一张。</p></div></div>
+        <div class="pick-actions">
+          <label class="picker" id="dropZone">
+            <input id="photoPicker" type="file" accept="image/*" multiple>
+            <b>从相册选择</b><small>或把图片拖到这里</small><i>添加图片</i>
+          </label>
+          <label class="camera-picker">
+            <input id="cameraPicker" type="file" accept="image/*" capture="environment">
+            <b>现在拍一张</b><small>使用手机相机</small>
+          </label>
+        </div>
+
+        <div class="selection-head" id="selectionHead">
+          <p>桌面上有 <b id="photoCount">0</b> 张</p>
+          <button id="clearPhotos" type="button">清空图片</button>
+        </div>
+        <div class="photo-list" id="photoList"></div>
+        <figure class="quick-preview" id="quickPreview" hidden>
+          <canvas id="previewCanvas" width="720" height="480" aria-label="第一张照片处理效果预览"></canvas>
+          <figcaption><b>第一张效果预览</b><span>最终像素尺寸以导出设置为准</span><button id="holdOriginal" type="button">按住看原图</button></figcaption>
+        </figure>
+      </section>
+
+      <section class="edit-area" aria-labelledby="editTitle">
+        <div class="section-title edit-title"><span>处理</span><div><h2 id="editTitle">需要什么，就动什么</h2><p>所有设置会应用到本次选择的图片。</p></div></div>
+        <div class="history-bar">
+          <button id="undoEdit" type="button" disabled>撤销</button>
+          <button id="redoEdit" type="button" disabled>重做</button>
+          <button id="resetAll" type="button">恢复原始设置</button>
+        </div>
+
+        <div class="tool-sheet" id="toolSheet" data-active-workspace="modify">
+          <div class="workspace-overview" data-workspace="modify"><b>图片修改</b><span>一键证件照 · 换底色 · 智能消去 · 尺寸与输出</span></div>
+          <div class="workspace-overview" data-workspace="color"><b>调色</b><span>一键风格 · 光线与颜色 · 质感微调</span></div>
+          <div class="workspace-overview" data-workspace="retouch"><b>P图</b><span>文字校正 · 字体匹配 · 局部修补</span></div>
+
+          <section class="tool-section quick-fix-section" data-workspace="modify">
+            <div class="tool-heading"><b>快速优化</b><small>最常用的两个一键功能</small></div>
+            <div class="quick-fix-actions">
+              <button type="button" data-clarity><i>清</i><span><b>一键提高清晰度</b><small>边缘锐化、局部增透、保护噪点</small></span></button>
+              <button type="button" id="softBeauty"><i>颜</i><span><b>一键清颜</b><small>识别人脸，保留五官与皮肤纹理</small></span></button>
+              <input id="clarityAmount" type="hidden" value="0">
+              <input id="beautyAmount" type="hidden" value="0">
+            </div>
+            <div class="effect-receipt" id="effectReceipt" aria-live="polite"><i></i><span><b>效果回执</b><small>开启后，可在上方预览按住比较原图</small></span></div>
+          </section>
+
+          <section class="tool-section" data-workspace="modify">
+            <div class="tool-heading"><b>构图</b><small>裁剪、旋转与镜像</small></div>
+            <div class="tool-grid transform-grid">
+              <label>裁剪比例<select id="cropRatio"><option value="original">原图</option><option value="1">1 : 1</option><option value="0.75">3 : 4</option><option value="1.333333">4 : 3</option><option value="1.777778">16 : 9</option></select></label>
+              <label>横向位置<input id="cropX" type="range" min="0" max="100" value="50"></label>
+              <label>纵向位置<input id="cropY" type="range" min="0" max="100" value="50"></label>
+              <div class="plain-actions" aria-label="旋转和镜像">
+                <button id="rotateLeft" type="button">左转 90°</button>
+                <button id="rotateRight" type="button">右转 90°</button>
+                <button id="flipHorizontal" type="button">水平镜像</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="tool-section" data-workspace="modify">
+            <div class="tool-heading"><b>尺寸</b><small>按像素重新输出</small></div>
+            <div class="tool-line">
+              <label class="switch"><input id="resizeEnabled" type="checkbox"><i></i></label>
+              <div class="size-inputs">
+                <label><span>宽</span><input id="targetWidth" type="number" min="1" max="10000" inputmode="numeric" placeholder="例如 1024"><em>px</em></label>
+                <i>×</i>
+                <label><span>高</span><input id="targetHeight" type="number" min="1" max="10000" inputmode="numeric" placeholder="自动"><em>px</em></label>
+              </div>
+              <label class="ratio-option"><input id="keepRatio" type="checkbox" checked> 保持比例</label>
+            </div>
+          </section>
+
+          <section class="tool-section naming-section" data-workspace="modify">
+            <div class="tool-heading"><b>图片命名</b><small>每张图片可以使用不同名称</small></div>
+            <div class="naming-jump"><p>名称输入框在上方图片列表中；同名图片会自动补上 _2、_3，不会互相覆盖。</p><button id="focusNaming" type="button">前往命名</button></div>
+          </section>
+
+          <section class="tool-section color-presets-section" data-workspace="color">
+            <div class="tool-heading"><b>一键风格</b><small>先选氛围，再用下面滑杆微调</small></div>
+            <div class="color-presets" id="colorPresets">
+              <button type="button" data-color-preset="filmWarm"><i style="--tone:#b97843"></i><b>暖调胶片</b><small>热门 · 人像街拍</small></button>
+              <button type="button" data-color-preset="tealOrange"><i style="--tone:#356c70"></i><b>青橙电影</b><small>热门 · 旅行建筑</small></button>
+              <button type="button" data-color-preset="cleanPortrait"><i style="--tone:#e2c9b3"></i><b>清透人像</b><small>热门 · 日常自拍</small></button>
+              <button type="button" data-color-preset="cream"><i style="--tone:#d8c9a8"></i><b>奶油柔光</b><small>室内、甜感人像</small></button>
+              <button type="button" data-color-preset="cinema"><i style="--tone:#334a52"></i><b>冷感电影</b><small>深色故事氛围</small></button>
+              <button type="button" data-color-preset="softEmber"><i style="--tone:#9c5f45"></i><b>柔焰复古</b><small>暖棕、怀旧</small></button>
+              <button type="button" data-color-preset="fadedBlue"><i style="--tone:#71889c"></i><b>褪色蓝</b><small>安静故事感</small></button>
+              <button type="button" data-color-preset="deepSage"><i style="--tone:#697869"></i><b>深灰青绿</b><small>森林、阴天</small></button>
+              <button type="button" data-color-preset="nightGold"><i style="--tone:#7d633d"></i><b>夜景黑金</b><small>城市灯光</small></button>
+              <button type="button" data-color-preset="mono"><i style="--tone:#555"></i><b>黑白纪实</b><small>人物、建筑</small></button>
+            </div>
+            <button class="preset-clarity" type="button" data-clarity>一键提高清晰度</button>
+            <input id="shadowTeal" type="hidden" value="0"><input id="highlightWarm" type="hidden" value="0"><input id="filmGrain" type="hidden" value="0">
+            <p class="preset-status" id="presetStatus">尚未选择风格</p>
+          </section>
+
+          <section class="tool-section" data-workspace="color">
+            <div class="tool-heading"><b>光与颜色</b><small>轻轻修，不做过度美化</small></div>
+            <div class="adjust-grid">
+              <label>亮度 <input id="brightness" type="range" min="-50" max="50" value="0"><output>0</output></label>
+              <label>对比度 <input id="contrast" type="range" min="-50" max="50" value="0"><output>0</output></label>
+              <label>饱和度 <input id="saturation" type="range" min="-100" max="50" value="0"><output>0</output></label>
+              <label>自然鲜艳 <input id="vibrance" type="range" min="-50" max="50" value="0"><output>0</output></label>
+              <label>色温 <input id="warmth" type="range" min="-50" max="50" value="0"><output>0</output></label>
+              <label>色调 <input id="tint" type="range" min="-50" max="50" value="0"><output>0</output></label>
+              <label>高光 <input id="highlights" type="range" min="-50" max="50" value="0"><output>0</output></label>
+              <label>阴影 <input id="shadows" type="range" min="-50" max="50" value="0"><output>0</output></label>
+              <label>褪色 <input id="fade" type="range" min="0" max="50" value="0"><output>0</output></label>
+              <label>暗角 <input id="vignette" type="range" min="0" max="50" value="0"><output>0</output></label>
+              <label>锐化 <input id="sharpen" type="range" min="0" max="50" value="0"><output>0</output></label>
+            </div>
+            <button class="text-action" id="autoEnhance" type="button">一键自然优化</button>
+          </section>
+
+          <section class="tool-section standard-photo-section" data-workspace="modify">
+            <div class="tool-heading"><b>一键证件照</b><small>自动联动尺寸、底色、格式与文件大小</small></div>
+            <div>
+              <div class="photo-standard-list" id="photoStandardList">
+                <button type="button" data-photo-standard="cet"><i>CET</i><b>四六级常用照</b><small>144×192 · 浅蓝底 · JPG · ≤200KB</small></button>
+                <button type="button" data-photo-standard="cet20"><i>CET</i><b>四六级小文件版</b><small>144×192 · 浅蓝底 · JPG · ≤20KB</small></button>
+                <button type="button" data-photo-standard="ntce"><i>NTCE</i><b>教师资格报名照</b><small>295×413 · 白底 · JPG · ≤200KB</small></button>
+                <button type="button" data-photo-standard="civil"><i>EXAM</i><b>国考报名照</b><small>295×413 · 白/蓝底 · JPG</small></button>
+                <button type="button" data-photo-standard="oneInch"><i>1寸</i><b>标准一寸照</b><small>295×413 · 白底 · JPG</small></button>
+                <button type="button" data-photo-standard="twoInch"><i>2寸</i><b>标准二寸照</b><small>413×579 · 白底 · JPG</small></button>
+              </div>
+              <div class="standard-result" id="standardResult"><b>选择一种规格</b><p>会自动开启人物识别并套用参数，之后仍可手动调整人物位置和目标KB。</p></div>
+              <p class="standard-warning">四六级照片由学校采集，常见要求并不完全统一：有的限20KB，有的限200KB。请按本校当次通知选版本；不得使用美颜或改变本人面貌。</p>
+            </div>
+          </section>
+
+          <section class="tool-section background-swap-section" data-workspace="modify">
+            <div class="tool-heading"><b>一键换底色</b><small>自动抠出人物并替换纯色背景</small></div>
+            <div class="quick-backgrounds" id="quickBackgrounds">
+              <button type="button" data-quick-bg="#c8e3f3"><i style="--bg:#c8e3f3"></i><b>浅蓝底</b></button>
+              <button type="button" data-quick-bg="#3979b8"><i style="--bg:#3979b8"></i><b>蓝底</b></button>
+              <button type="button" data-quick-bg="#c92f35"><i style="--bg:#c92f35"></i><b>红底</b></button>
+              <button type="button" data-quick-bg="#ffffff"><i style="--bg:#ffffff"></i><b>白底</b></button>
+              <button type="button" data-quick-bg="#303537"><i style="--bg:#303537"></i><b>深灰底</b></button>
+              <label><input id="quickCustomBg" type="color" value="#6c927d"><i></i><b>自选颜色</b></label>
+            </div>
+          </section>
+
+          <section class="tool-section portrait-section" data-workspace="modify">
+            <div class="tool-heading"><b>人物与背景</b><small>本机识别，不上传照片</small></div>
+            <div class="feature-switch"><span>启用人物抠图</span><label class="switch"><input id="personEnabled" type="checkbox"><i></i></label></div>
+
+            <section class="portrait-panel" id="portraitPanel" hidden>
+              <div class="portrait-status"><i></i><span id="personStatus">打开后将识别第一张照片中的人物</span></div>
+              <div class="background-choices">
+                <b>背景</b>
+                <div class="colors" role="radiogroup" aria-label="选择人物背景">
+                  <label title="透明背景"><input type="radio" name="personBg" value="transparent"><i class="transparent"></i></label>
+                  <label title="白色"><input type="radio" name="personBg" value="#ffffff"><i style="--c:#ffffff"></i></label>
+                  <label title="浅蓝色"><input type="radio" name="personBg" value="#c8e3f3"><i style="--c:#c8e3f3"></i></label>
+                  <label title="红色"><input type="radio" name="personBg" value="#c92f35"><i style="--c:#c92f35"></i></label>
+                  <label title="蓝色"><input type="radio" name="personBg" value="#3979b8" checked><i style="--c:#3979b8"></i></label>
+                  <label title="灰色"><input type="radio" name="personBg" value="#303537"><i style="--c:#303537"></i></label>
+                  <label class="custom-color" title="自定义颜色"><input id="customBgColor" type="color" value="#6c927d"><i></i></label>
+                </div>
+                <label class="upload-background"><input id="backgroundPicker" type="file" accept="image/*">上传背景图</label>
+                <button id="clearBackground" type="button" hidden>移除背景</button>
+              </div>
+
+              <div class="portrait-stage">
+                <canvas id="editorCanvas" width="600" height="750" aria-label="人物编辑预览"></canvas>
+                <p>移动人物或用画笔修补边缘</p>
+              </div>
+              <div class="brush-bar">
+                <div class="segmented-control" role="group" aria-label="人物编辑模式">
+                  <button class="active" data-brush-mode="move" type="button">移动</button>
+                  <button data-brush-mode="erase" type="button">擦除</button>
+                  <button data-brush-mode="restore" type="button">恢复</button>
+                </div>
+                <label>画笔大小 <input id="brushSize" type="range" min="6" max="100" value="34"><output id="brushValue">34</output></label>
+              </div>
+              <div class="placement-controls">
+                <label class="edge-control">边缘精细度 <input id="edgeRefine" type="range" min="0" max="100" value="82"><output id="edgeValue">发丝去色溢</output></label>
+                <label class="scale-control">人物大小 <input id="personScale" type="range" min="35" max="220" value="100"><output id="scaleValue">100%</output></label>
+                <div class="margins">
+                  <label>上<input id="marginTop" type="number" inputmode="numeric"><span>px</span></label>
+                  <label>下<input id="marginBottom" type="number" inputmode="numeric"><span>px</span></label>
+                  <label>左<input id="marginLeft" type="number" inputmode="numeric"><span>px</span></label>
+                  <label>右<input id="marginRight" type="number" inputmode="numeric"><span>px</span></label>
+                </div>
+                <button class="text-action" id="resetPerson" type="button">人物恢复居中</button>
+              </div>
+            </section>
+          </section>
+
+          <section class="tool-section" data-workspace="modify">
+            <div class="tool-heading"><b>文字水印</b><small>姓名、日期或版权信息</small></div>
+            <div class="watermark-grid">
+              <label>内容<input id="watermarkText" type="text" maxlength="80" placeholder="留空则不添加"></label>
+              <label>位置<select id="watermarkPosition"><option value="bottom-right">右下</option><option value="bottom-left">左下</option><option value="top-right">右上</option><option value="top-left">左上</option><option value="center">居中</option></select></label>
+              <label>大小<input id="watermarkSize" type="range" min="1" max="10" value="4"></label>
+              <label>透明度<input id="watermarkOpacity" type="range" min="10" max="100" value="72"></label>
+              <label class="watermark-color">颜色<input id="watermarkColor" type="color" value="#ffffff"></label>
+            </div>
+          </section>
+
+          <section class="tool-section" data-workspace="modify">
+            <div class="tool-heading"><b>隐私马赛克</b><small>遮住人脸、号码或敏感内容</small></div>
+            <div class="privacy-grid">
+              <div class="feature-switch"><span>启用遮挡</span><label class="switch"><input id="mosaicEnabled" type="checkbox"><i></i></label></div>
+              <label>左右位置<input id="mosaicX" type="range" min="0" max="100" value="50"></label>
+              <label>上下位置<input id="mosaicY" type="range" min="0" max="100" value="50"></label>
+              <label>遮挡宽度<input id="mosaicWidth" type="range" min="5" max="90" value="30"></label>
+              <label>遮挡高度<input id="mosaicHeight" type="range" min="5" max="90" value="18"></label>
+              <label>颗粒大小<input id="mosaicStrength" type="range" min="5" max="40" value="18"></label>
+            </div>
+          </section>
+
+          <section class="tool-section remove-section" data-workspace="modify">
+            <div class="tool-heading"><b>智能消去</b><small>框选文字、小物体或画面杂物</small></div>
+            <div class="text-edit-launch">
+              <p>从选区四周延展颜色与纹理，适合去掉小字、路人或杂物；复杂背景建议分几次小范围处理。</p>
+              <button id="openRemoveEditor" type="button" disabled>打开智能消去</button>
+            </div>
+          </section>
+
+          <section class="tool-section text-edit-section" data-workspace="retouch">
+            <div class="tool-heading"><b>图片文字校正</b><small>识别整行，生成校正版</small></div>
+            <div class="text-edit-launch">
+              <p>选中照片后框选完整文字行，自动分析排版与背景，导出时会标明已编辑。</p>
+              <button id="openTextEditor" type="button" disabled>校正第一张图片的文字</button>
+            </div>
+          </section>
+
+          <section class="tool-section export-settings" data-workspace="modify">
+            <div class="tool-heading"><b>格式与压缩</b><small>控制清晰度和文件大小</small></div>
+            <div class="export-grid">
+              <label>输出格式<select id="outputFormat"><option value="auto">自动</option><option value="jpeg">JPG</option><option value="png">PNG</option><option value="webp">WebP</option></select></label>
+              <label>画质<input id="outputQuality" type="range" min="40" max="100" value="92"><output id="qualityValue">92%</output></label>
+              <label>目标大小<input id="targetKB" type="number" min="20" max="50000" inputmode="numeric" placeholder="可选"><span>KB 以内</span></label>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="output-area" id="outputArea" aria-labelledby="outputTitle">
+        <div class="section-title"><span>完成</span><div><h2 id="outputTitle">把成品带走</h2><p>同名照片会自动补上 _2、_3，不会覆盖。</p></div></div>
+        <div class="outputs">
+          <button class="output-button zip" id="downloadZip" type="button" disabled><span><b>打包下载</b><small>多张照片装进一个 ZIP</small></span><i>ZIP</i></button>
+          <button class="output-button files" id="downloadFiles" type="button" disabled><span><b>保存普通图片</b><small>下载或打开手机分享菜单</small></span><i>IMG</i></button>
+          <button class="output-button word" id="downloadWord" type="button" disabled><span><b>导出 Word 文档</b><small>每张成品图片单独一页</small></span><i>DOC</i></button>
+        </div>
+        <label class="word-export-name" for="wordFileName">
+          <span><b>Word 文件名</b><small>导出前直接命名，不用再去 WPS 改文件名</small></span>
+          <span class="word-name-field"><input id="wordFileName" type="text" maxlength="80" autocomplete="off" placeholder="例如：报名照片"><i>.docx</i></span>
+        </label>
+        <p class="mobile-note" id="mobileNote">手机浏览器会优先打开系统分享菜单；电脑浏览器会直接下载文件。</p>
+        <section class="save-tray" id="saveTray" hidden aria-live="polite">
+          <header>
+            <div><small>手机保存模式</small><b>成品已经生成</b><p id="saveTrayHint">长按下方图片，选择“保存图片”即可存入相册。</p></div>
+            <button id="closeSaveTray" type="button">收起</button>
+          </header>
+          <div class="zip-fallback" id="zipFallback" hidden>
+            <span><b id="zipFallbackName">下载文件</b><small id="packageFallbackHelp">微信可能会拦截文件下载；可以生成一个10分钟有效的正常下载链接。</small></span>
+            <a id="zipFallbackLink" href="#" download>尝试下载 ZIP</a>
+          </div>
+          <div class="save-tray-actions">
+            <button id="sharePackageFile" type="button" hidden>保存 / 分享文件</button>
+            <button id="shareAllResults" type="button" hidden>用手机分享 / 保存</button>
+            <button id="retryNormalDownload" type="button">尝试普通下载</button>
+          </div>
+          <div class="save-tray-list" id="saveTrayList"></div>
+          <p class="save-tray-help">提示：在微信里长按图片后选择“保存图片”。如果没有该选项，请点每张图片下方的“分享 / 保存”。</p>
+        </section>
+      </section>
+    </main>
+
+    <nav class="workspace-nav" aria-label="图片工具导航">
+      <button class="active" type="button" data-workspace-target="modify"><i>01</i><b>图片修改</b></button>
+      <button type="button" data-workspace-target="color"><i>02</i><b>调色</b></button>
+      <button type="button" data-workspace-target="retouch"><i>03</i><b>P图</b></button>
+    </nav>
+
+    <footer><b>片刻</b><p>默认本地处理 · 临时下载需确认 · 10分钟自动删除</p></footer>
+  </div>
+  <div class="text-editor-overlay" id="textEditPanel" hidden role="dialog" aria-modal="true" aria-labelledby="textEditPhotoName">
+    <div class="text-editor-dialog">
+      <header class="text-editor-head">
+        <div><small>图片文字校正</small><b id="textEditPhotoName">当前图片</b></div>
+        <button id="closeTextEditor" type="button" aria-label="完成并关闭改文字">完成</button>
+      </header>
+      <div class="text-editor-body">
+        <div class="text-stage-column">
+          <div class="text-step"><i>1</i><span>用手指或鼠标圈出要修改的文字</span></div>
+          <div class="text-edit-stage"><canvas id="textEditCanvas" width="800" height="500" aria-label="框选需要修改的文字"></canvas></div>
+          <p class="text-stage-hint">选框尽量贴近文字，背景越平整，替换效果越自然。</p>
+        </div>
+        <div class="text-controls-column">
+          <div class="text-edit-status"><i>2</i><span id="ocrStatus">请先在图片上框选文字</span></div>
+          <div class="correction-mode-note"><b>高精度校正版</b><span>会分析整行文字边界与四周纹理；导出图片固定保留“已编辑 · 校正版”标识。</span></div>
+          <div class="text-selection-actions">
+            <button id="recognizeSelection" type="button" disabled>自动识别原文字</button>
+            <button id="clearTextSelection" type="button" disabled>重新框选</button>
+          </div>
+          <label class="replacement-field"><span>改成什么</span><textarea id="replacementText" rows="3" maxlength="160" placeholder="直接输入新文字；也可以先点上方自动识别"></textarea></label>
+          <div class="text-quick-controls">
+            <label>文字颜色<input id="replacementColor" type="color" value="#202020"></label>
+            <label>字号<input id="replacementSize" type="range" min="45" max="200" value="100"><output id="replacementSizeValue">100%</output></label>
+          </div>
+          <div class="ink-match-controls">
+            <label>墨迹浓淡<input id="replacementOpacity" type="range" min="25" max="100" value="100"><output id="replacementOpacityValue">100%</output></label>
+            <label>边缘柔和<input id="replacementSoftness" type="range" min="0" max="200" value="0"><output id="replacementSoftnessValue">0.0px</output></label>
+          </div>
+          <div class="text-preset-panel" id="textPresetPanel">
+            <div class="text-preset-row"><span>常用字号</span><div class="size-presets">
+              <button type="button" data-size-preset="75">小五<small>9pt</small></button>
+              <button type="button" data-size-preset="88">五号<small>10.5pt</small></button>
+              <button type="button" data-size-preset="100">小四<small>12pt</small></button>
+              <button type="button" data-size-preset="117">四号<small>14pt</small></button>
+              <button type="button" data-size-preset="125">小三<small>15pt</small></button>
+              <button type="button" data-size-preset="133">三号<small>16pt</small></button>
+              <button type="button" data-size-preset="150">小二<small>18pt</small></button>
+              <button type="button" data-size-preset="183">二号<small>22pt</small></button>
+            </div></div>
+            <div class="text-preset-row"><span>通用样式</span><div class="style-presets">
+              <button type="button" data-style-preset="body">正文宋体</button>
+              <button type="button" data-style-preset="table">表格小字</button>
+              <button type="button" data-style-preset="heading">醒目标题</button>
+              <button type="button" data-style-preset="fang">仿宋段落</button>
+              <button type="button" data-style-preset="note">楷体说明</button>
+            </div></div>
+            <small>pt 为图片中的近似排版比例，应用后仍可用滑杆微调。</small>
+          </div>
+          <details class="text-advanced">
+            <summary>字体与背景</summary>
+            <div class="text-replace-grid">
+              <label>字体<select id="replacementFont"><option value="auto">自动匹配原字体</option><option value="serif">宋体</option><option value="sans">黑体</option><option value="kai">楷体</option><option value="fang">仿宋</option><option value="mono">等宽</option></select></label>
+              <label>背景颜色<input id="replacementBackground" type="color" value="#ffffff"></label>
+              <label class="inline-check"><input id="matchOriginalStyle" type="checkbox" checked> 自动匹配原字体、粗细与颜色</label>
+              <label class="inline-check"><input id="matchOriginalInk" type="checkbox" checked> 智能匹配原文墨迹浓淡与边缘</label>
+              <label class="inline-check"><input id="autoReplacementBackground" type="checkbox" checked> 智能延展原背景纹理</label>
+              <label class="inline-check"><input id="replacementBold" type="checkbox"> 加粗文字</label>
+              <small id="styleMatchStatus">识别原文字后会自动匹配最接近的样式</small>
+            </div>
+          </details>
+          <div class="text-apply-actions">
+            <button id="applyTextReplacement" type="button" disabled>替换这处文字</button>
+            <button id="undoTextReplacement" type="button" disabled>撤销上一次</button>
+          </div>
+          <p class="text-edit-help">尽量框选完整的一行并留出少量四周背景，识别和复原会更准确。请勿用于伪造证件、票据或证明材料。</p>
+        </div>
       </div>
-      <div class="inline-error" id="identityError" aria-live="polite"></div>
-
-      <div class="section-head second"><span>02</span><div><h2>选择自己的照片</h2><p>可以选择一张或两张，最多两张。</p></div></div>
-      <label class="drop-zone" id="dropZone">
-        <input id="photoPicker" type="file" accept="image/*" multiple>
-        <div class="plus">＋</div>
-        <div><h3>点击选择照片</h3><p>也可以把照片拖到这里 · 支持一张或两张</p></div>
-      </label>
-
-      <div class="photo-toolbar" id="photoToolbar">
-        <div><b id="photoCount">已选择 0/2 张</b><span id="photoHint"></span></div>
-        <button id="clearPhotos" class="text-button">清空照片</button>
+    </div>
+  </div>
+  <div class="remove-editor-overlay" id="removeEditorPanel" hidden role="dialog" aria-modal="true" aria-labelledby="removePhotoName">
+    <div class="remove-editor-dialog">
+      <header class="text-editor-head">
+        <div><small>智能消去</small><b id="removePhotoName">当前图片</b></div>
+        <button id="closeRemoveEditor" type="button">完成</button>
+      </header>
+      <div class="remove-editor-body">
+        <div class="remove-stage-column">
+          <div class="text-step"><i>1</i><span>框住需要去掉的内容，并在四周留一点背景</span></div>
+          <div class="remove-edit-stage"><canvas id="removeEditCanvas" width="800" height="500" aria-label="框选需要去除的内容"></canvas></div>
+        </div>
+        <aside class="remove-controls">
+          <div class="text-edit-status"><i>2</i><span id="removeStatus">请先在图片上框选区域</span></div>
+          <p>系统会从选区四周延展颜色和纹理。小面积文字、路人或杂物效果更稳定。</p>
+          <div class="remove-actions">
+            <button id="applySmartRemove" type="button" disabled>消去选中内容</button>
+            <button id="clearRemoveSelection" type="button" disabled>重新框选</button>
+            <button id="undoSmartRemove" type="button" disabled>撤销上一次</button>
+          </div>
+        </aside>
       </div>
-      <div class="photo-grid" id="photoGrid"></div>
-
-      <div class="example">
-        <span>命名示例</span>
-        <code>202521330001_张三_01.jpg</code>
-        <code>202521330001_张三_02.jpg</code>
-      </div>
-
-      <div class="download-bar">
-        <div><h2>下载我的照片包</h2><p>压缩包里只包含你刚才选择并自动命名的照片。</p></div>
-        <button id="downloadPersonal" disabled>生成并下载</button>
-      </div>
-    </section>
-
-    <section class="privacy-card">
-      <b>你的照片只属于你</b>
-      <p>本工具没有账号、数据库、上传接口或管理后台。照片只在当前手机或电脑的浏览器中处理，其他使用者和网站维护者都看不到。</p>
-    </section>
-  </main>
+    </div>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+  <script type="module" src="app.js?v=20260718-hosting-v1"></script>
 </body>
 </html>
