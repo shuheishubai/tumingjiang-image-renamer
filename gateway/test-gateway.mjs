@@ -65,8 +65,69 @@ try {
   const anonymousAiStatus = await fetch(`${base}/api/ai/status`);
   if (anonymousAiStatus.status !== 401) throw new Error('Anonymous AI status access was not blocked.');
   const ownerAiStatus = await jsonRequest('/api/ai/status', { method: 'GET' }, ownerCookie);
-  if (!ownerAiStatus.response.ok || ownerAiStatus.body.model !== 'gpt-image-2' || typeof ownerAiStatus.body.configured !== 'boolean') {
+  if (!ownerAiStatus.response.ok || ownerAiStatus.body.model !== 'gpt-image-2' || typeof ownerAiStatus.body.configured !== 'boolean' || !ownerAiStatus.body.chatModel) {
     throw new Error('Owner AI status check failed.');
+  }
+
+  const anonymousIngest = await jsonRequest('/api/ingest/orders', {
+    method: 'POST',
+    body: JSON.stringify({ requestText: 'anonymous order' })
+  });
+  if (anonymousIngest.response.status !== 401) throw new Error('Anonymous order ingestion was not blocked.');
+
+  const tokenCreated = await jsonRequest('/api/access/ingest-token', {
+    method: 'POST',
+    body: JSON.stringify({ label: 'Gateway regression test' })
+  }, ownerCookie);
+  if (tokenCreated.response.status !== 201 || !/^tj_ingest_[A-Za-z0-9_-]{40,}$/.test(tokenCreated.body.token)) {
+    throw new Error('Least-privilege ingest token creation failed.');
+  }
+
+  const ingested = await jsonRequest('/api/ingest/orders', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${tokenCreated.body.token}` },
+    body: JSON.stringify({
+      conversationKey: 'test-conversation',
+      customerName: 'Test Customer',
+      title: 'Test Photo Order',
+      requestText: 'Resize to 200 x 300 pixels',
+      sourceFingerprint: 'gateway-test-fingerprint'
+    })
+  });
+  if (ingested.response.status !== 201 || ingested.body.order?.source !== 'xianyu') {
+    throw new Error('Authorized order ingestion failed.');
+  }
+
+  const invalidIngest = await jsonRequest('/api/ingest/orders', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer tj_ingest_invalid_invalid_invalid_invalid_invalid' },
+    body: JSON.stringify({ requestText: 'invalid token' })
+  });
+  if (invalidIngest.response.status !== 401) throw new Error('Invalid ingest token was accepted.');
+
+  const orderList = await jsonRequest('/api/orders', { method: 'GET' }, ownerCookie);
+  if (!orderList.response.ok || !orderList.body.orders.some((order) => order.id === ingested.body.order.id)) {
+    throw new Error('Owner order listing failed.');
+  }
+
+  const sourceBytes = Buffer.from('test-image-bytes');
+  const orderUpload = await jsonRequest(`/api/orders/${ingested.body.order.id}/files`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'image/jpeg',
+      'X-File-Name': encodeURIComponent('source.jpg'),
+      'X-File-Kind': 'source'
+    },
+    body: sourceBytes
+  }, ownerCookie);
+  if (orderUpload.response.status !== 201 || !orderUpload.body.file?.id) {
+    throw new Error('Owner order file upload failed.');
+  }
+  const orderDownload = await fetch(`${base}/api/orders/${ingested.body.order.id}/files/${orderUpload.body.file.id}`, {
+    headers: { Cookie: ownerCookie }
+  });
+  if (!orderDownload.ok || !Buffer.from(await orderDownload.arrayBuffer()).equals(sourceBytes)) {
+    throw new Error('Owner order file download failed.');
   }
 
   const anonymousUpload = await fetch(`${base}/api/downloads`, {
@@ -113,6 +174,8 @@ try {
   const viewerCookie = viewerLogin.response.headers.get('set-cookie')?.split(';')[0] || '';
   const viewerAiStatus = await fetch(`${base}/api/ai/status`, { headers: { Cookie: viewerCookie } });
   if (viewerAiStatus.status !== 403) throw new Error('Viewer access to owner-only AI endpoint was not blocked.');
+  const viewerOrders = await fetch(`${base}/api/orders`, { headers: { Cookie: viewerCookie } });
+  if (viewerOrders.status !== 403) throw new Error('Viewer access to owner-only orders was not blocked.');
 
   const disabled = await jsonRequest(`/api/access/keys/${created.body.record.id}`, {
     method: 'DELETE',
@@ -133,7 +196,7 @@ try {
     throw new Error('Six-digit access-code brute-force lockout failed.');
   }
 
-  console.log('Validated gateway authentication, owner-only AI access, temporary Word downloads, key lifecycle, session revocation, and brute-force lockout.');
+  console.log('Validated gateway authentication, owner-only AI and order access, least-privilege ingestion, file storage, temporary Word downloads, key lifecycle, session revocation, and brute-force lockout.');
 } finally {
   child.kill();
 }

@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "照片那点小事·接单监控",
+  "version": "1.0.0",
+  "description": "监控已登录的闲鱼网页新消息，并同步到你的随身接单台。最终发送由店主确认。",
+  "permissions": [
+    "alarms",
+    "notifications",
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://www.goofish.com/*",
+    "https://*.alicdn.com/*",
+    "https://*.tbcdn.cn/*",
+    "https://82.157.65.90/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.goofish.com/im*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "打开接单监控"
+  }
+}

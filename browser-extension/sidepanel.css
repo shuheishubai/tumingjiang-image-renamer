@@ -1,0 +1,30 @@
+:root {
+  font-family: "Microsoft YaHei", system-ui, sans-serif;
+  color: #17221d;
+  background: #f5f1e8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 300px; }
+header { position: relative; padding: 1.2rem; color: white; background: #17221d; }
+header p { margin: 0 0 .25rem; color: #f4a172; font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+header h1 { margin: 0; font-family: "SimSun", serif; }
+#statePill { position: absolute; right: 1rem; top: 1.4rem; padding: .3rem .55rem; border-radius: 999px; font-size: .7rem; background: rgba(255,255,255,.14); }
+main { padding: .85rem; }
+section { margin-bottom: .8rem; padding: 1rem; border-radius: 1rem; background: #fffdf8; box-shadow: 0 .6rem 1.5rem rgba(55, 43, 31, .07); }
+h2 { margin: 0 0 .7rem; font-size: .95rem; }
+label { display: grid; gap: .35rem; margin-bottom: .7rem; font-size: .76rem; font-weight: 750; }
+input, textarea, button { font: inherit; }
+input, textarea { width: 100%; padding: .65rem; border: 1px solid #d7d0c4; border-radius: .7rem; background: #fbf8f1; }
+textarea { resize: vertical; font-family: ui-monospace, monospace; font-size: .7rem; }
+button { width: 100%; margin-top: .45rem; padding: .7rem; border: 0; border-radius: 999px; font-weight: 750; background: #ece5d8; }
+button.primary { color: white; background: #1f5c46; }
+.hint, .notice p, .toggle-line p { margin: .55rem 0 0; color: #6d746f; font-size: .72rem; line-height: 1.5; }
+.toggle-line { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+.toggle-line h2 { margin-bottom: .2rem; }
+.switch { display: block; margin: 0; }
+.switch input { display: none; }
+.switch span { display: block; width: 2.7rem; height: 1.5rem; padding: .18rem; border-radius: 999px; background: #cbc5bb; transition: .2s; }
+.switch span::after { content: ""; display: block; width: 1.14rem; height: 1.14rem; border-radius: 50%; background: white; transition: .2s; }
+.switch input:checked + span { background: #1f5c46; }
+.switch input:checked + span::after { transform: translateX(1.2rem); }
+.notice { border-left: .25rem solid #e47b45; }

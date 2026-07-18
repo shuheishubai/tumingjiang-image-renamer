@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>接单监控</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header>
+    <p>照片那点小事</p>
+    <h1>接单监控</h1>
+    <span id="statePill">未配置</span>
+  </header>
+
+  <main>
+    <section>
+      <h2>连接随身接单台</h2>
+      <label>服务器地址
+        <input id="serverUrl" type="url" value="https://82.157.65.90" autocomplete="off">
+      </label>
+      <label>专用同步令牌
+        <textarea id="ingestToken" rows="4" placeholder="在手机接单台的“连接电脑监控”中生成"></textarea>
+      </label>
+      <button id="saveButton" class="primary" type="button">保存并测试</button>
+      <p id="connectionMessage" class="hint"></p>
+    </section>
+
+    <section>
+      <div class="toggle-line">
+        <div>
+          <h2>自动监控新消息</h2>
+          <p>需要电脑开机、Chrome 打开并保持闲鱼登录。</p>
+        </div>
+        <label class="switch">
+          <input id="monitoring" type="checkbox">
+          <span></span>
+        </label>
+      </div>
+      <button id="readNowButton" type="button">立即读取当前会话</button>
+      <button id="openDeskButton" type="button">打开随身接单台</button>
+    </section>
+
+    <section class="notice">
+      <strong>安全边界</strong>
+      <p>扩展只读取当前闲鱼网页并上传到你的服务器，不会自动发消息、收款、退款，也不会绕过验证码或平台风控。</p>
+    </section>
+  </main>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

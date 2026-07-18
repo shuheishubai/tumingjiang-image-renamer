@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#17221d">
+  <title>随身接单台</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/cloud/cloud.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">照片那点小事</p>
+      <h1>随身接单台</h1>
+    </div>
+    <div class="top-actions">
+      <button id="notifyButton" class="quiet-button" type="button">打开提醒</button>
+      <button id="installButton" class="quiet-button" type="button" hidden>装到桌面</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="status-strip" aria-live="polite">
+      <span id="liveDot" class="live-dot"></span>
+      <strong id="liveText">正在连接云端订单</strong>
+      <span id="lastSync"></span>
+    </section>
+
+    <section class="control-row" aria-label="订单操作">
+      <button id="newOrderButton" class="primary-button" type="button">手动记一单</button>
+      <button id="tokenButton" class="paper-button" type="button">连接电脑监控</button>
+      <button id="refreshButton" class="paper-button" type="button">刷新</button>
+    </section>
+
+    <section class="desk">
+      <aside class="order-rail">
+        <div class="rail-heading">
+          <h2>今天的来单</h2>
+          <span id="orderCount">0 单</span>
+        </div>
+        <div id="orderList" class="order-list">
+          <div class="empty-card">暂时没有新订单。电脑端监控到闲鱼消息后，会自动出现在这里。</div>
+        </div>
+      </aside>
+
+      <article id="orderDetail" class="order-detail" aria-live="polite">
+        <div class="detail-empty">
+          <span>⌁</span>
+          <h2>选一条订单开始处理</h2>
+          <p>需求、顾客图片、回复草稿和交付文件都会集中放在这里。</p>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="newOrderDialog">
+    <form id="newOrderForm" method="dialog">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">临时来单</p>
+          <h2>手动记一单</h2>
+        </div>
+        <button class="icon-button" value="cancel" aria-label="关闭" type="submit">×</button>
+      </div>
+      <label>顾客称呼<input name="customerName" maxlength="80" placeholder="例如：闲鱼顾客"></label>
+      <label>订单标题<input name="title" maxlength="120" placeholder="例如：四六级报名照"></label>
+      <label>顾客需求<textarea name="requestText" rows="6" maxlength="10000" required placeholder="粘贴顾客原话，稍后可以继续修改"></textarea></label>
+      <div class="dialog-actions">
+        <button class="paper-button" value="cancel" type="submit">取消</button>
+        <button class="primary-button" value="default" type="submit">保存订单</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="tokenDialog">
+    <div class="dialog-heading">
+      <div>
+        <p class="eyebrow">只读同步</p>
+        <h2>连接电脑监控</h2>
+      </div>
+      <button id="closeTokenDialog" class="icon-button" aria-label="关闭" type="button">×</button>
+    </div>
+    <p class="dialog-copy">生成一个专用同步令牌，粘贴到 Chrome 扩展。它只能上传订单，不能登录管理页面，也不能替你发送闲鱼消息。</p>
+    <div id="tokenStatus" class="token-status">正在检查令牌状态…</div>
+    <button id="rotateTokenButton" class="primary-button full-button" type="button">生成或轮换同步令牌</button>
+    <div id="tokenResult" class="token-result" hidden>
+      <label>只显示这一次
+        <textarea id="tokenValue" rows="3" readonly></textarea>
+      </label>
+      <button id="copyTokenButton" class="paper-button full-button" type="button">复制令牌</button>
+    </div>
+  </dialog>
+
+  <template id="detailTemplate">
+    <div class="detail-heading">
+      <div>
+        <p class="source-line"></p>
+        <h2 class="detail-title"></h2>
+        <p class="detail-time"></p>
+      </div>
+      <select class="status-select" aria-label="订单状态">
+        <option value="new">新消息</option>
+        <option value="triage">待确认</option>
+        <option value="processing">处理中</option>
+        <option value="review">待检查</option>
+        <option value="ready">待交付</option>
+        <option value="done">已完成</option>
+        <option value="cancelled">不接此单</option>
+      </select>
+    </div>
+
+    <section class="detail-block">
+      <h3>顾客需求</h3>
+      <textarea class="request-editor" rows="7" aria-label="顾客需求"></textarea>
+      <button class="paper-button save-request" type="button">保存需求</button>
+    </section>
+
+    <section class="detail-block">
+      <h3>顾客图片与交付文件</h3>
+      <div class="file-grid"></div>
+      <label class="upload-button">上传源图或成品
+        <input class="file-input" type="file" multiple accept="image/*,.zip,.docx">
+      </label>
+    </section>
+
+    <section class="detail-block reply-block">
+      <div class="block-heading">
+        <h3>回复草稿</h3>
+        <button class="paper-button quick-draft" type="button">一键起草</button>
+      </div>
+      <textarea class="reply-editor" rows="6" placeholder="这里的内容不会自动发到闲鱼"></textarea>
+      <div class="inline-actions">
+        <button class="paper-button save-reply" type="button">保存草稿</button>
+        <button class="primary-button copy-reply" type="button">复制回复</button>
+      </div>
+      <p class="safety-note">最终发送仍由你在闲鱼里确认，系统不会代替你点击发送。</p>
+    </section>
+
+    <section class="detail-block chat-block">
+      <div class="block-heading">
+        <div>
+          <h3>问问店铺助手</h3>
+          <p>帮你补问、判断能不能接、拟回复或检查交付。</p>
+        </div>
+      </div>
+      <div class="chat-log"></div>
+      <label class="consent-line"><input class="ai-consent" type="checkbox">允许把已脱敏的订单文字发送给 OpenAI</label>
+      <div class="chat-compose">
+        <textarea class="chat-input" rows="3" placeholder="例如：这个需求还缺什么信息？"></textarea>
+        <button class="primary-button chat-send" type="button">发送</button>
+      </div>
+    </section>
+
+    <button class="danger-button delete-order" type="button">删除这条订单</button>
+  </template>
+
+  <script src="/cloud/cloud.js" defer></script>
+</body>
+</html>

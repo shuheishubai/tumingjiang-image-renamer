@@ -8,6 +8,11 @@ const js = await readFile(resolve(root, "site/app.js"), "utf8");
 const assistantHtml = await readFile(resolve(root, "site/assistant/index.html"), "utf8");
 const assistantCss = await readFile(resolve(root, "site/assistant/assistant.css"), "utf8");
 const assistantJs = await readFile(resolve(root, "site/assistant/assistant.js"), "utf8");
+const cloudHtml = await readFile(resolve(root, "site/cloud/index.html"), "utf8");
+const cloudCss = await readFile(resolve(root, "site/cloud/cloud.css"), "utf8");
+const cloudJs = await readFile(resolve(root, "site/cloud/cloud.js"), "utf8");
+const manifest = await readFile(resolve(root, "site/manifest.webmanifest"), "utf8");
+const serviceWorker = await readFile(resolve(root, "site/sw.js"), "utf8");
 const out = resolve(root, "dist/server/index.js");
 const worker = `const ASSETS = ${JSON.stringify({
   "/": { body: html, type: "text/html; charset=utf-8" },
@@ -19,6 +24,13 @@ const worker = `const ASSETS = ${JSON.stringify({
   "/assistant/index.html": { body: assistantHtml, type: "text/html; charset=utf-8" },
   "/assistant/assistant.css": { body: assistantCss, type: "text/css; charset=utf-8" },
   "/assistant/assistant.js": { body: assistantJs, type: "text/javascript; charset=utf-8" },
+  "/cloud": { body: cloudHtml, type: "text/html; charset=utf-8" },
+  "/cloud/": { body: cloudHtml, type: "text/html; charset=utf-8" },
+  "/cloud/index.html": { body: cloudHtml, type: "text/html; charset=utf-8" },
+  "/cloud/cloud.css": { body: cloudCss, type: "text/css; charset=utf-8" },
+  "/cloud/cloud.js": { body: cloudJs, type: "text/javascript; charset=utf-8" },
+  "/manifest.webmanifest": { body: manifest, type: "application/manifest+json; charset=utf-8" },
+  "/sw.js": { body: serviceWorker, type: "text/javascript; charset=utf-8" },
 })};
 const security = {
   "cache-control": "public, max-age=0, must-revalidate",
@@ -31,6 +43,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method Not Allowed", { status: 405, headers: { allow: "GET, HEAD" } });
+    if (url.pathname.startsWith("/api/")) return new Response(JSON.stringify({ error: "云端接单功能请使用腾讯云主站" }), { status: 503, headers: { ...security, "content-type": "application/json; charset=utf-8" } });
     if (url.pathname === "/robots.txt") return new Response("User-agent: *\\nAllow: /\\n", { headers: { "content-type": "text/plain; charset=utf-8" } });
     if (url.pathname === "/favicon.ico") return new Response(null, { status: 204 });
     if (env?.ASSETS) {

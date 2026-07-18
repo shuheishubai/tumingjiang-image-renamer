@@ -1,0 +1,11 @@
+{
+  "name": "照片那点小事·随身接单台",
+  "short_name": "接单台",
+  "description": "查看图片订单、顾客需求、回复草稿与交付文件。",
+  "start_url": "/cloud/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f1e8",
+  "theme_color": "#17221d",
+  "icons": []
+}
